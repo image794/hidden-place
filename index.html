@@ -3,43 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <title>Найди все нужные предметы</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
   <style>
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     html, body {
-      margin: 0;
-      padding: 0;
       height: 100%;
-      background: #05060a;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #f5f5f5;
     }
 
     body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background: #05060a;
+      color: #f5f5f5;
       display: flex;
       justify-content: center;
-      padding: max(10px, env(safe-area-inset-top, 0px)) 10px 16px;
+      align-items: stretch;
+      overflow: hidden; /* чтобы на телефоне не было скролла */
     }
 
     .page {
-      width: min(430px, 100vw);
+      width: 100%;
+      max-width: 500px;          /* примерно ширина айфона */
+      height: 100vh;             /* вся высота экрана */
+      padding: 10px 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .top-ui {
-      margin-bottom: 8px;
-      padding: 8px 10px 4px;
+    /* ВЕРХНЯЯ ПАНЕЛЬ */
+
+    .hud {
+      background: radial-gradient(circle at 0 0, #2b3253, #111321);
       border-radius: 18px;
-      background: radial-gradient(circle at 0 0, #343b66, #181927);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 10px 14px 10px;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
     }
 
-    .top-row {
+    .hud-top-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -47,70 +57,98 @@
       flex-wrap: wrap;
     }
 
-    .game-title {
+    .hud-title {
       font-size: 18px;
       font-weight: 600;
+      line-height: 1.2;
     }
 
-    .game-subtitle {
+    .hud-subtitle-block {
+      margin-top: 2px;
       font-size: 13px;
+      line-height: 1.25;
       opacity: 0.9;
     }
 
-    .pill {
-      border-radius: 999px;
+    .hud-subtitle-block span {
+      display: block;
+    }
+
+    .hud-badge {
       padding: 6px 10px;
+      border-radius: 999px;
       font-size: 13px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(0, 0, 0, 0.45);
+      font-weight: 500;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.25);
       white-space: nowrap;
     }
 
-    .pill-btn {
+    .music-btn {
       cursor: pointer;
+      user-select: none;
       outline: none;
+      border: none;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #f5f5f5;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
 
-    .pill-btn:active {
-      transform: scale(0.97);
+    .music-btn.on {
+      background: rgba(60, 207, 120, 0.2);
+      border: 1px solid rgba(60, 207, 120, 0.7);
     }
 
-    .counter-pill {
-      font-weight: 600;
+    /* ПОЛЕ ИГРЫ */
+
+    .game {
+      flex: 1;
+      min-height: 0; /* важно для flex, чтобы умещалось без скролла */
     }
 
-    /* Рамка с фоном и предметами под размер экрана телефона */
-    .image-frame {
+    .image-container {
       position: relative;
       width: 100%;
-      height: 78vh;        /* игра занимает 78% высоты экрана */
-    width: 100%;
-    max-height: 78vh;
-      border-radius: 24px;
+      height: 100%;
+      border-radius: 18px;
       overflow: hidden;
-      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.75);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7);
       background: #000;
     }
 
-    /* Фон: твоя основная картинка */
+    /* Фон: твоя главная картинка */
     .base-image {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
-      filter: brightness(0.96);
-      transition: filter 0.25s ease;
+      filter: brightness(0.9);
+      transition: filter 0.3s ease;
     }
 
-    /* Слой с предметами */
+    /* Лёгкая затемняющая подложка, чтобы фон не читался пока есть плитки */
+    .fog {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 20%, rgba(0,0,0,0.15), rgba(0,0,0,0.75));
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
     .items-layer {
       position: absolute;
       inset: 0;
-      pointer-events: none; /* клики только по картинкам, не по слою */
+      pointer-events: none;
     }
 
-    .item {
+    .tile {
       position: absolute;
       pointer-events: auto;
       cursor: pointer;
@@ -118,124 +156,118 @@
       -webkit-user-drag: none;
       border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1),
-                  0 10px 25px rgba(0, 0, 0, 0.65);
-      transform: translate(-50%, -50%) rotate(var(--initial-rotation, 0deg));
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 6px 16px rgba(0, 0, 0, 0.7);
       transition:
-        transform 0.18s ease,
-        opacity 0.3s ease,
-        box-shadow 0.18s ease;
-      background: rgba(0, 0, 0, 0.6);
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        opacity 0.25s ease;
+      transform-origin: center center;
+      background: #222;
     }
 
-    .item-img {
+    .tile img {
+      display: block;
       width: 100%;
       height: 100%;
       object-fit: cover;
-      display: block;
     }
 
-    .item:hover {
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45),
-                  0 12px 30px rgba(0, 0, 0, 0.9);
-      transform: translate(-50%, -50%) scale(1.03) rotate(var(--initial-rotation, 0deg));
+    .tile:hover {
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.35),
+        0 8px 20px rgba(0, 0, 0, 0.9);
+      transform: scale(1.03) translateZ(0);
     }
 
-    .item.found {
+    .tile.found {
       opacity: 0;
-      transform: translate(-50%, -50%) scale(0.7) rotate(var(--initial-rotation, 0deg));
-      box-shadow: none;
       pointer-events: none;
+      transform: scale(0.7) rotate(3deg);
+      box-shadow: none;
+    }
+
+    .page.game-complete .fog {
+      opacity: 0;
     }
 
     .page.game-complete .base-image {
-      filter: brightness(1.05);
+      filter: brightness(1.03);
     }
 
-    .status-text {
-      margin-top: 6px;
-      font-size: 13px;
-      opacity: 0.9;
+    @media (max-height: 650px) {
+      .hud-title {
+        font-size: 16px;
+      }
+      .hud-subtitle-block {
+        font-size: 12px;
+      }
+      .hud-badge,
+      .music-btn {
+        font-size: 12px;
+        padding: 4px 10px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="page" id="page">
-    <header class="top-ui">
-      <div class="top-row">
-        <div class="game-title">Найди все нужные предметы 🔍</div>
-        <button class="pill pill-btn" id="musicToggle">Музыка выкл 🎵</button>
-      </div>
-      <div class="top-row">
-        <div class="game-subtitle">
-          Нажимай на правильные предметы, чтобы они исчезали.
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+    <header class="hud">
+      <div class="hud-top-row">
+        <div class="hud-title">
+          Найди все нужные предметы 🔍
         </div>
-        <div class="pill counter-pill" id="counter">Найдено 0 из 40</div>
+        <button class="music-btn" id="musicToggle">
+          Музыка выкл 🎵
+        </button>
+      </div>
+
+      <!-- ОБЕ ФРАЗЫ В ОДНОМ ОКОШКЕ -->
+      <div class="hud-subtitle-block">
+        <span>Нажимай на правильные предметы, чтобы они исчезали.</span>
+        <span>Найди <b>40</b> правильных предметов, остальное — лишний хлам.</span>
+      </div>
+
+      <div class="hud-top-row" style="justify-content: flex-end;">
+        <div class="hud-badge" id="counterBadge">Найдено 0 из 40</div>
       </div>
     </header>
 
-    <div class="image-frame">
-      <!-- твой фон: просто замени background.jpg на свой файл -->
-      <img src="background.jpg" alt="Фон" class="base-image" />
+    <!-- ПОЛЕ ИГРЫ -->
+    <main class="game">
+      <div class="image-container">
+        <!-- твой фон -->
+        <img src="background.jpg" alt="Фон" class="base-image">
 
-      <!-- сюда JS добавит все предметы -->
-      <div class="items-layer" id="itemsLayer"></div>
-    </div>
-
-    <div class="status-text" id="statusText">
-      Найди 40 правильных предметов. Остальное — лишний хлам 🙂
-    </div>
+        <div class="fog"></div>
+        <div class="items-layer" id="itemsLayer"></div>
+      </div>
+    </main>
   </div>
 
-  <script>
-    // === НАСТРОЙКИ ===
-    const GOOD_COUNT = 40;  // сколько правильных предметов
-    const BAD_COUNT = 83;   // сколько неправильных
-    const TOTAL_ITEMS = GOOD_COUNT + BAD_COUNT;
+  <!-- МУЗЫКА (по желанию поменяй файл) -->
+  <audio id="bgMusic" src="music.mp3" loop></audio>
 
-    // размеры (в процентах от ширины рамки):
-    const BASE_WIDTH_PERCENT = 17;      // базовая ширина
-    const SIZE_VARIATION = 0.2;         // ±20%
-    const ROTATED_COUNT = 33;           // сколько картинок чуть повернуть
-    const COLS = 9;                     // "сетка" для равномерного распределения
-    const ROWS = 14;                    // вместе даёт 126 ячеек (> 123 картинок)
-    const JITTER = 4;                   // разброс от центра ячейки (в процентах)
+  <script>
+    const GOOD_COUNT = 40;
+    const BAD_COUNT = 83;
+    const TOTAL = GOOD_COUNT + BAD_COUNT;
 
     const page = document.getElementById('page');
     const itemsLayer = document.getElementById('itemsLayer');
-    const counterEl = document.getElementById('counter');
-    const statusTextEl = document.getElementById('statusText');
+    const counterBadge = document.getElementById('counterBadge');
     const musicToggle = document.getElementById('musicToggle');
+    const bgMusic = document.getElementById('bgMusic');
 
     let foundGood = 0;
 
-    // === МУЗЫКА (по желанию) ===
-    let audio;
-    let musicOn = false;
-    try {
-      audio = new Audio('music.mp3'); // если файла нет – просто не будет играть
-      audio.loop = true;
-    } catch (e) {
-      audio = null;
-    }
-
-    musicToggle.addEventListener('click', () => {
-      if (!audio) return;
-      musicOn = !musicOn;
-      if (musicOn) {
-        audio.play().catch(() => {});
-        musicToggle.textContent = 'Музыка вкл 🎶';
-      } else {
-        audio.pause();
-        musicToggle.textContent = 'Музыка выкл 🎵';
-      }
-    });
-
-    // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
-
     function updateCounter() {
-      counterEl.textContent = `Найдено ${foundGood} из ${GOOD_COUNT}`;
+      counterBadge.textContent = `Найдено ${foundGood} из ${GOOD_COUNT}`;
     }
+
+    // РАНДОМНОЕ РАЗМЕЩЕНИЕ ПО СЕТКЕ
 
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -245,119 +277,137 @@
       return array;
     }
 
-    // генерируем список всех позиций ячеек
-    function makeGridPositions(cols, rows) {
+    function generatePositions(total) {
+      const cols = 10;   // количество столбцов
+      const rows = 13;   // количество строк (10*13=130 > 123)
       const cells = [];
+
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          const x = ((c + 0.5) / cols) * 100;
-          const y = ((r + 0.5) / rows) * 100;
-          cells.push({ x, y });
+          cells.push({
+            x: (c + 0.5) * (100 / cols),
+            y: (r + 0.5) * (100 / rows)
+          });
         }
       }
-      return shuffle(cells);
+
+      shuffle(cells);
+      return cells.slice(0, total);
     }
 
-    // === СОЗДАЁМ СПИСОК ПРЕДМЕТОВ (ТОЛЬКО ИМЕНА ФАЙЛОВ) ===
-    const itemsData = [];
+    const positions = generatePositions(TOTAL);
 
-    for (let i = 1; i <= GOOD_COUNT; i++) {
-      itemsData.push({
-        src: `good${i}.jpg`,
-        type: 'good',
-        label: `Правильный предмет ${i}`
-      });
-    }
-
-    for (let i = 1; i <= BAD_COUNT; i++) {
-      itemsData.push({
-        src: `bad${i}.jpg`,
-        type: 'bad',
-        label: `Лишний предмет ${i}`
-      });
-    }
-
-    // перемешиваем, чтобы правильные и неправильные не шли подряд
-    shuffle(itemsData);
-
-    // выбираем случайные индексы, которые будут чуть повернуты
+    // выберем 33 индекса, которые будут с поворотом
     const rotatedIndexes = new Set();
-    while (rotatedIndexes.size < Math.min(ROTATED_COUNT, itemsData.length)) {
-      rotatedIndexes.add(Math.floor(Math.random() * itemsData.length));
+    while (rotatedIndexes.size < 33 && rotatedIndexes.size < TOTAL) {
+      rotatedIndexes.add(Math.floor(Math.random() * TOTAL));
     }
 
-    const gridPositions = makeGridPositions(COLS, ROWS);
+    function createTile(index, type, pos) {
+      const tile = document.createElement('div');
+      tile.className = `tile ${type}`;
+      tile.dataset.type = type;
+      tile.dataset.index = index;
 
-    // === СОЗДАЁМ КАРТИНКИ В DOM ===
-    itemsData.forEach((item, index) => {
-      const cell = gridPositions[index % gridPositions.length];
+      // Базовый размер и рандом ±20%
+      const baseWidth = 22; // в процентах от ширины контейнера
+      const scale = 0.8 + Math.random() * 0.4; // 80%–120%
+      const widthPercent = baseWidth * scale;
+      tile.style.width = widthPercent + '%';
 
-      const wrapper = document.createElement('div');
-      wrapper.className = `item ${item.type}`;
-      wrapper.dataset.type = item.type;
+      // Соотношение сторон делаем чуть вытянутым для эффекта карточки
+      const heightPercent = widthPercent * 0.75;
+      tile.style.height = heightPercent + '%';
 
-      // случайный размер ±20%
-      const delta = (Math.random() * 2 - 1) * SIZE_VARIATION; // от -0.2 до +0.2
-      const width = BASE_WIDTH_PERCENT * (1 + delta);
+      // Позиции (центрируем по точке x,y)
+      tile.style.left = pos.x + '%';
+      tile.style.top = pos.y + '%';
+      tile.style.transform = 'translate(-50%, -50%)';
 
-      // небольшое смещение от центра ячейки
-      const offsetX = (Math.random() * 2 - 1) * JITTER;
-      const offsetY = (Math.random() * 2 - 1) * JITTER;
-
-      const x = cell.x + offsetX;
-      const y = cell.y + offsetY;
-
-      wrapper.style.width = `${width}%`;
-      wrapper.style.left = `${x}%`;
-      wrapper.style.top = `${y}%`;
-
-      // поворот части картинок
-      let rotation = 0;
+      // Рандомный поворот для части плиток
       if (rotatedIndexes.has(index)) {
-        rotation = (Math.random() * 30 - 15).toFixed(1); // от -15° до +15°
+        const angle = (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 10); // от 5 до 15 градусов
+        tile.style.transform += ` rotate(${angle}deg)`;
       }
-      wrapper.style.setProperty('--initial-rotation', `${rotation}deg`);
 
       const img = document.createElement('img');
-      img.src = item.src;
-      img.alt = item.label;
-      img.className = 'item-img';
+      if (type === 'good') {
+        img.src = `good${index + 1}.jpg`;
+        img.alt = `Good item ${index + 1}`;
+      } else {
+        // bad нумеруются с 1 заново
+        const badIndex = index - GOOD_COUNT + 1;
+        img.src = `bad${badIndex}.jpg`;
+        img.alt = `Bad item ${badIndex}`;
+      }
 
-      wrapper.appendChild(img);
-      itemsLayer.appendChild(wrapper);
-    });
+      tile.appendChild(img);
+      itemsLayer.appendChild(tile);
 
-    // === ЛОГИКА КЛИКОВ ===
+      tile.addEventListener('click', () => {
+        if (tile.classList.contains('found')) return;
+
+        if (type === 'good') {
+          tile.classList.add('found');
+          foundGood++;
+          updateCounter();
+
+          if (foundGood >= GOOD_COUNT) {
+            // победа
+            setTimeout(() => {
+              page.classList.add('game-complete');
+
+              // убираем все плитки после небольшой паузы
+              Array.from(document.querySelectorAll('.tile')).forEach(t => {
+                t.classList.add('found');
+              });
+            }, 250);
+          }
+        } else {
+          // неправильный предмет – лёгкая тряска
+          tile.style.transform += ' translateY(-4px)';
+          tile.style.boxShadow =
+            '0 0 0 1px rgba(255, 80, 80, 0.7), 0 8px 20px rgba(0, 0, 0, 0.9)';
+
+          setTimeout(() => {
+            // возвращаем обратно
+            const current = tile.style.transform.replace(' translateY(-4px)', '');
+            tile.style.transform = current;
+            tile.style.boxShadow =
+              '0 0 0 1px rgba(255, 255, 255, 0.1), 0 6px 16px rgba(0, 0, 0, 0.7)';
+          }, 180);
+        }
+      });
+    }
+
+    // СОЗДАЁМ ВСЕ ПЛИТКИ
+
+    let globalIndex = 0;
+
+    for (let i = 0; i < GOOD_COUNT; i++, globalIndex++) {
+      createTile(globalIndex, 'good', positions[globalIndex]);
+    }
+
+    for (let j = 0; j < BAD_COUNT; j++, globalIndex++) {
+      createTile(globalIndex, 'bad', positions[globalIndex]);
+    }
+
     updateCounter();
 
-    itemsLayer.addEventListener('click', (event) => {
-      const target = event.target.closest('.item');
-      if (!target) return;
+    // МУЗЫКА
 
-      const type = target.dataset.type;
+    let musicOn = false;
 
-      if (type === 'good') {
-        if (target.classList.contains('found')) return;
-        target.classList.add('found');
-        foundGood++;
-        updateCounter();
-
-        if (foundGood >= GOOD_COUNT) {
-          statusTextEl.textContent = 'Браво! Ты нашла все нужные предметы ✨';
-          page.classList.add('game-complete');
-
-          // скрываем все остальные
-          document.querySelectorAll('.item').forEach((it) => {
-            if (!it.classList.contains('found')) {
-              it.classList.add('found');
-            }
-          });
-        } else {
-          statusTextEl.textContent = 'Есть! Продолжай искать правильные предметы…';
-        }
+    musicToggle.addEventListener('click', () => {
+      musicOn = !musicOn;
+      if (musicOn) {
+        bgMusic.play().catch(() => {});
+        musicToggle.textContent = 'Музыка вкл 🎵';
+        musicToggle.classList.add('on');
       } else {
-        // неправильный предмет — не убираем, просто текст
-        statusTextEl.textContent = 'Это лишний предмет 😏 Ищи другие.';
+        bgMusic.pause();
+        musicToggle.textContent = 'Музыка выкл 🎵';
+        musicToggle.classList.remove('on');
       }
     });
   </script>
