@@ -2,374 +2,404 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Найди 18 предметов</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <title>Найди спрятанные предметы</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
     * {
       box-sizing: border-box;
-      padding: 0;
-      margin: 0;
     }
 
     html, body {
-      width: 100%;
+      margin: 0;
+      padding: 0;
       height: 100%;
     }
 
     body {
       background: #000;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      overflow: hidden; /* без скролла */
-      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      color: #f5f5f5;
     }
 
-    .game {
+    .game-wrapper {
+      position: relative;
       width: 100vw;
       height: 100vh;
+      overflow: hidden;
+      background: #000;
+      touch-action: manipulation;
     }
 
-    .image-container {
-      position: relative;
+    .base-image {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
-      /* ТУТ ПОДСТАВЬ СВОЙ ФОН: background.jpg лежит рядом с index.html */
-      background-image: url("background.jpg");
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-    }
-
-    /* Верхняя панель */
-    .top-bar {
-      position: absolute;
-      top: 10px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 10px;
-      pointer-events: none; /* кликаем сквозь, кроме кнопок */
-      z-index: 50;
-    }
-
-    .top-bar > * {
-      pointer-events: auto;
-    }
-
-    .pill {
-      background: rgba(0, 0, 0, 0.55);
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      padding: 6px 10px;
-      font-size: 13px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    .pill-button {
-      cursor: pointer;
-      transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-    }
-
-    .pill-button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    }
-
-    .pill-button.active {
-      background: rgba(40, 180, 120, 0.9);
-      border-color: rgba(189, 255, 220, 0.9);
-    }
-
-    .instruction {
-      position: absolute;
-      top: 50px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 15px;
-      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
-      padding: 0 10px;
-      z-index: 40;
+      object-fit: cover;
+      filter: brightness(0.95);
+      transition: filter 0.3s ease;
+      z-index: 1;
     }
 
     .items-layer {
       position: absolute;
       inset: 0;
-      z-index: 10;
-      pointer-events: none; /* клики только по самим item */
-      transition: opacity 0.6s ease;
-    }
-
-    .items-layer.hidden {
-      opacity: 0;
+      z-index: 5;
       pointer-events: none;
+      transition: opacity 0.4s ease;
     }
 
     .item {
       position: absolute;
-      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
       user-select: none;
       -webkit-user-drag: none;
-      cursor: pointer;
-      pointer-events: auto;
-      border-radius: 12px;
+      /* базовый размер: от ширины контейнера */
+      width: 14%;
+      max-width: 120px;
+      border-radius: 22px;
+      background: rgba(10, 12, 20, 0.8);
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.5),
+        0 12px 25px rgba(0, 0, 0, 0.6);
       overflow: hidden;
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18),
-                  0 8px 18px rgba(0, 0, 0, 0.7);
-      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      --scale: 1;
+      transform: scale(var(--scale));
       transition:
-        transform 0.25s ease,
         opacity 0.35s ease,
-        box-shadow 0.25s ease,
-        filter 0.25s ease;
+        transform 0.35s ease,
+        box-shadow 0.2s ease;
     }
 
     .item img {
-      display: block;
-      width: 100%;
-      height: 100%;
+      width: 80%;
+      height: 80%;
       object-fit: cover;
     }
 
     .item:hover {
-      transform: translate(-50%, -50%) scale(1.06);
-      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35),
-                  0 12px 26px rgba(0, 0, 0, 0.9);
-      filter: brightness(1.05);
+      transform: scale(calc(var(--scale) * 1.05));
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.3),
+        0 14px 30px rgba(0, 0, 0, 0.9);
     }
 
     .item.found {
       opacity: 0;
-      transform: translate(-50%, -50%) scale(0.1) rotate(8deg);
-      box-shadow: none;
+      transform: scale(calc(var(--scale) * 0.55));
       pointer-events: none;
+      box-shadow: none;
     }
 
-    .item.wrong-click {
-      animation: shake 0.25s ease;
+    .item.bad.shake {
+      animation: shake 0.25s linear;
     }
 
     @keyframes shake {
-      0% { transform: translate(-50%, -50%) translateX(0); }
-      25% { transform: translate(-50%, -50%) translateX(-4px); }
-      50% { transform: translate(-50%, -50%) translateX(4px); }
-      75% { transform: translate(-50%, -50%) translateX(-3px); }
-      100% { transform: translate(-50%, -50%) translateX(0); }
+      0%   { transform: translateX(0) scale(var(--scale)); }
+      25%  { transform: translateX(-4px) scale(var(--scale)); }
+      50%  { transform: translateX(4px) scale(var(--scale)); }
+      75%  { transform: translateX(-2px) scale(var(--scale)); }
+      100% { transform: translateX(0) scale(var(--scale)); }
+    }
+
+    .top-bar {
+      position: absolute;
+      left: env(safe-area-inset-left, 8px);
+      right: env(safe-area-inset-right, 8px);
+      top: env(safe-area-inset-top, 8px);
+      z-index: 20;
+      padding: 6px 10px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(18, 21, 40, 0.96), rgba(34, 40, 70, 0.96));
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .top-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .top-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .top-hint {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .music-btn {
+      align-self: flex-start;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: rgba(0, 0, 0, 0.25);
+      color: #f5f5f5;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .music-btn.active {
+      background: rgba(30, 199, 120, 0.25);
+      border-color: rgba(30, 199, 120, 0.9);
+    }
+
+    .counter-pill {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: rgba(0, 0, 0, 0.3);
+      white-space: nowrap;
     }
 
     .final-message {
       position: absolute;
-      left: 10px;
-      right: 10px;
-      bottom: 16px;
-      padding: 10px 12px;
-      font-size: 14px;
-      border-radius: 12px;
-      background: rgba(22, 120, 70, 0.9);
-      border: 1px solid rgba(200, 255, 220, 0.9);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      left: 50%;
+      bottom: env(safe-area-inset-bottom, 14px);
+      transform: translateX(-50%);
+      z-index: 20;
+      padding: 10px 14px;
+      max-width: calc(100% - 32px);
+      border-radius: 14px;
+      background: rgba(30, 199, 120, 0.15);
+      border: 1px solid rgba(30, 199, 120, 0.7);
+      font-size: 13px;
+      text-align: center;
       display: none;
-      z-index: 60;
     }
 
-    .final-message.visible {
+    .game-complete .final-message {
       display: block;
+    }
+
+    .game-complete .items-layer {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .game-complete .base-image {
+      filter: brightness(1.05);
+    }
+
+    @media (min-width: 900px) {
+      .game-wrapper {
+        width: 430px;
+        height: 932px;
+        border-radius: 24px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
+      }
     }
   </style>
 </head>
 <body>
-  <div class="game">
-    <div class="image-container">
-      <!-- Верхние элементы UI -->
-      <div class="top-bar">
-        <button id="musicToggle" class="pill pill-button">
-          Включить музыку 🎵
-        </button>
-        <div id="counter" class="pill">
-          Найдено 0 из 18
-        </div>
-      </div>
+  <div class="game-wrapper" id="game">
+    <img src="background.jpg" alt="Фон" class="base-image" />
 
-      <div class="instruction" id="instruction">
-        Нажимай на правильные предметы, чтобы они исчезали.
-      </div>
-
-      <!-- Слой с предметами -->
-      <div class="items-layer" id="itemsLayer"></div>
-
-      <!-- Финальное сообщение -->
-      <div class="final-message" id="finalMessage">
-        Браво! 🎉 Ты нашла все 18 предметов. Фон открыт — можно переходить к следующему заданию.
-      </div>
+    <div class="items-layer" id="itemsLayer">
+      <!-- Карточки-предметы создаются через JS -->
     </div>
+
+    <div class="top-bar">
+      <div class="top-left">
+        <button class="music-btn" id="musicToggle">Включить музыку 🎵</button>
+        <div class="top-hint">Нажимай на правильные предметы, чтобы они исчезали.</div>
+      </div>
+      <div class="counter-pill" id="counter">Найдено 0 из 18</div>
+    </div>
+
+    <div class="final-message" id="finalMessage">
+      Браво! 🎉 Ты нашла все предметы. Картинка теперь чистая — можно переходить к следующему заданию.
+    </div>
+
+    <audio id="bgMusic" src="music.mp3" loop></audio>
   </div>
 
-  <!-- Музыка (положи рядом файл music.mp3 или измени src) -->
-  <audio id="music" loop>
-    <source src="music.mp3" type="audio/mpeg" />
-  </audio>
-
   <script>
-    /************************************************************
-     * НАСТРОЙКИ ДЛЯ ТЕБЯ
-     ************************************************************/
-
-    // Сколько правильных / неправильных
+    // ===== НАСТРОЙКИ ИГРЫ =====
     const GOOD_COUNT = 18;
-    const BAD_COUNT = 82;
+    const TOTAL_ITEMS = 100; // 18 правильных + 82 неправильных
 
-    // Имена файлов с правильными предметами (замени на свои)
-    // Эти файлы ты кладёшь рядом с index.html
-    const GOOD_IMAGES = [
-      "good1.jpg", "good2.jpg", "good3.jpg", "good4.jpg",
-      "good5.jpg", "good6.jpg", "good7.jpg", "good8.jpg",
-      "good9.jpg", "good10.jpg","good11.jpg","good12.jpg",
-      "good13.jpg","good14.jpg","good15.jpg","good16.jpg",
-      "good17.jpg","good18.jpg"
+    // СЮДА ВПИШИ ИМЕНА СВОИХ 18 ПРАВИЛЬНЫХ КАРТИНОК (файлы лежат рядом с index.html)
+    const goodImages = [
+      "good1.jpg",
+      "good2.jpg",
+      "good3.jpg",
+      "good4.jpg",
+      "good5.jpg",
+      "good6.jpg",
+      "good7.jpg",
+      "good8.jpg",
+      "good9.jpg",
+      "good10.jpg",
+      "good11.jpg",
+      "good12.jpg",
+      "good13.jpg",
+      "good14.jpg",
+      "good15.jpg",
+      "good16.jpg",
+      "good17.jpg",
+      "good18.jpg"
     ];
 
-    // Имена файлов с неправильными предметами
-    const BAD_IMAGES = Array.from({ length: BAD_COUNT }, (_, i) => `bad${i + 1}.jpg`);
+    // Картинка-заглушка для неправильных предметов (можешь поменять на свою)
+    const badPlaceholder = "https://i.imgur.com/1Yc5Z6v.png";
 
-    // Если у тебя пока нет 100 разных файлов — ничего страшного:
-    // можешь просто сделать несколько файлов и вписать их повторно
-    // в массивы GOOD_IMAGES и BAD_IMAGES.
-
-    /************************************************************
-     * ЛОГИКА ИГРЫ
-     ************************************************************/
-
+    const game = document.getElementById("game");
     const itemsLayer = document.getElementById("itemsLayer");
     const counterEl = document.getElementById("counter");
     const finalMessage = document.getElementById("finalMessage");
-    const instructionEl = document.getElementById("instruction");
-    const music = document.getElementById("music");
     const musicToggle = document.getElementById("musicToggle");
+    const bgMusic = document.getElementById("bgMusic");
 
     let foundGood = 0;
-    const totalGood = GOOD_COUNT;
+    let musicOn = false;
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
 
     function updateCounter() {
-      counterEl.textContent = `Найдено ${foundGood} из ${totalGood}`;
+      counterEl.textContent = `Найдено ${foundGood} из ${GOOD_COUNT}`;
     }
 
-    // Создаём массив всех предметов (с типом good / bad)
-    const itemsData = [];
-
-    for (let i = 0; i < GOOD_COUNT; i++) {
-      itemsData.push({
-        type: "good",
-        src: GOOD_IMAGES[i % GOOD_IMAGES.length] || GOOD_IMAGES[0],
-      });
-    }
-
-    for (let i = 0; i < BAD_COUNT; i++) {
-      itemsData.push({
-        type: "bad",
-        src: BAD_IMAGES[i % BAD_IMAGES.length] || BAD_IMAGES[0],
-      });
-    }
-
-    // Расставляем 100 предметов по сетке 10x10 по ВСЕМУ экрану
     function createItems() {
-      const rows = 10;
-      const cols = 10;
-      const totalCells = rows * cols; // 100
+      const positions = [];
 
-      // На всякий случай, если вдруг itemsData меньше/больше 100
-      const count = Math.min(itemsData.length, totalCells);
+      const COLS = 10;
+      const ROWS = 10;
 
-      for (let i = 0; i < count; i++) {
-        const data = itemsData[i];
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          positions.push({ r, c });
+        }
+      }
 
-        const row = Math.floor(i / cols);
-        const col = i % cols;
+      shuffle(positions);
 
-        const cellWidth = 100 / cols;
-        const cellHeight = 100 / rows;
+      const flags = Array(TOTAL_ITEMS)
+        .fill(false)
+        .map((_, i) => i < GOOD_COUNT); // первые 18 — правильные
+      shuffle(flags); // перемешиваем, чтобы правильные были не подряд
 
-        // Немного хаоса в позиции, чтобы не было идеально по сетке
-        const jitterX = (Math.random() - 0.5) * 0.5 * cellWidth;   // ±25% ширины клетки
-        const jitterY = (Math.random() - 0.5) * 0.5 * cellHeight;  // ±25% высоты клетки
+      for (let i = 0; i < TOTAL_ITEMS; i++) {
+        const isGood = flags[i];
+        const pos = positions[i];
 
-        const xPercent = (col + 0.5) * cellWidth + jitterX;
-        const yPercent = (row + 0.5) * cellHeight + jitterY;
-
-        // Размер — от 13% до 22% ширины экрана
-        const sizePercent = 13 + Math.random() * 9;
-
-        const itemEl = document.createElement("div");
-        itemEl.className = "item";
-        itemEl.dataset.type = data.type;
-
-        itemEl.style.left = `${xPercent}%`;
-        itemEl.style.top = `${yPercent}%`;
-        itemEl.style.width = `${sizePercent}%`;
-        itemEl.style.aspectRatio = "1 / 1";
+        const wrapper = document.createElement("div");
+        wrapper.className = "item " + (isGood ? "good" : "bad");
+        wrapper.dataset.correct = isGood ? "1" : "0";
 
         const img = document.createElement("img");
-        img.src = data.src;
-        img.alt = data.type === "good" ? "Правильный предмет" : "Лишний предмет";
+        if (isGood) {
+          const idx = i % goodImages.length;
+          img.src = goodImages[idx];
+        } else {
+          img.src = badPlaceholder;
+        }
+        wrapper.appendChild(img);
 
-        itemEl.appendChild(img);
-        itemsLayer.appendChild(itemEl);
+        // позиция в процентах с небольшим рандомным смещением
+        const cellWidth = 100 / COLS;
+        const cellHeight = 100 / ROWS;
 
-        // Обработка клика
-        itemEl.addEventListener("click", () => {
-          if (itemEl.classList.contains("found")) return;
+        const jitterX = (Math.random() - 0.5) * 12; // +/- %
+        const jitterY = (Math.random() - 0.5) * 12;
 
-          if (data.type === "good") {
-            itemEl.classList.add("found");
-            foundGood++;
-            updateCounter();
+        const left = (pos.c + 0.5) * cellWidth + jitterX;
+        const top = (pos.r + 0.5) * cellHeight + jitterY;
 
-            if (foundGood === totalGood) {
-              // Все 18 найдены
-              instructionEl.textContent = "Все найдено! Фон открыт 🎉";
-              itemsLayer.classList.add("hidden");
-              finalMessage.classList.add("visible");
-            } else {
-              instructionEl.textContent = "Отлично! Ищи остальные правильные предметы…";
-            }
-          } else {
-            // неправильный предмет — чуть потрясти
-            itemEl.classList.remove("wrong-click");
-            void itemEl.offsetWidth; // перезапустить анимацию
-            itemEl.classList.add("wrong-click");
-          }
-        });
+        wrapper.style.left = left + "%";
+        wrapper.style.top = top + "%";
+        wrapper.style.transformOrigin = "50% 50%";
+
+        // лёгкий разброс по размеру
+        const scale = 0.9 + Math.random() * 0.4; // 0.9–1.3
+        wrapper.style.setProperty("--scale", scale.toString());
+
+        itemsLayer.appendChild(wrapper);
       }
     }
 
-    createItems();
-    updateCounter();
+    function handleItemClick(e) {
+      const target = e.target.closest(".item");
+      if (!target) return;
 
-    // Музыка
-    let musicOn = false;
+      const isGood = target.dataset.correct === "1";
 
-    musicToggle.addEventListener("click", async () => {
-      try {
-        if (!musicOn) {
-          await music.play();
-          musicOn = true;
-          musicToggle.classList.add("active");
-          musicToggle.textContent = "Выключить музыку 🔇";
-        } else {
-          music.pause();
+      if (isGood) {
+        if (target.classList.contains("found")) return;
+        target.classList.add("found");
+        foundGood++;
+        updateCounter();
+
+        if (foundGood === GOOD_COUNT) {
+          // все правильные найдены
+          game.classList.add("game-complete");
+        }
+      } else {
+        target.classList.remove("shake");
+        void target.offsetWidth; // перезапустить анимацию
+        target.classList.add("shake");
+      }
+    }
+
+    function setupMusic() {
+      musicToggle.addEventListener("click", () => {
+        if (!bgMusic.src) return;
+
+        if (musicOn) {
+          bgMusic.pause();
           musicOn = false;
           musicToggle.classList.remove("active");
           musicToggle.textContent = "Включить музыку 🎵";
+        } else {
+          bgMusic
+            .play()
+            .then(() => {
+              musicOn = true;
+              musicToggle.classList.add("active");
+              musicToggle.textContent = "Выключить музыку 🔇";
+            })
+            .catch(() => {
+              // мобильный Safari может не дать авто-плей без взаимодействия —
+              // но кнопка уже является кликом, так что обычно всё норм
+            });
         }
-      } catch (e) {
-        console.log("Не удалось воспроизвести музыку:", e);
-      }
-    });
+      });
+    }
+
+    // Инициализация
+    createItems();
+    updateCounter();
+    itemsLayer.addEventListener("click", handleItemClick);
+    setupMusic();
   </script>
 </body>
 </html>
