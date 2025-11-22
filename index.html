@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Игра: найди 18 предметов</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+    }
+
+    body {
+      margin: 0;
+      background: #05060a;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden; /* чтобы на телефоне НЕ было скролла */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #f5f5f5;
+    }
+
+    /* Вся игра — ровно размер экрана телефона */
+    #game {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 430px;   /* примерно iPhone по ширине */
+      max-height: 932px;  /* примерно iPhone по высоте */
+      background: black;
+      overflow: hidden;
+    }
+
+    .image-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Фон: твоя главная картинка */
+    .base-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.96);
+      transition: filter 0.3s ease;
+    }
+
+    .game-complete .base-image {
+      filter: brightness(1.05);
+    }
+
+    /* Слой с предметами */
+    .items-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .item {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-drag: none;
+      transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        opacity 0.35s ease;
+      opacity: 0.98;
+    }
+
+    .item:hover {
+      transform: translate(-50%, -50%) scale(1.05);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+    }
+
+    .item.found {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.7) rotate(-4deg);
+      pointer-events: none;
+      box-shadow: none;
+    }
+
+    /* анимация для неправильного предмета */
+    @keyframes shake {
+      0%   { transform: translate(-50%, -50%) translateX(0); }
+      25%  { transform: translate(-50%, -50%) translateX(-6px); }
+      50%  { transform: translate(-50%, -50%) translateX(6px); }
+      75%  { transform: translate(-50%, -50%) translateX(-3px); }
+      100% { transform: translate(-50%, -50%) translateX(0); }
+    }
+
+    .item.shake {
+      animation: shake 0.25s;
+    }
+
+    /* Панель внизу поверх картинки */
+    .ui-panel {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 10px 12px env(safe-area-inset-bottom);
+      background: linear-gradient(to top, rgba(3, 5, 10, 0.95), rgba(3, 5, 10, 0.85));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .ui-left {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .ui-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .ui-text {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .ui-counter {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      white-space: nowrap;
+    }
+
+    .music-btn {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: rgba(0, 0, 0, 0.5);
+      color: #f5f5f5;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .music-btn.active {
+      background: rgba(30, 199, 120, 0.25);
+      border-color: rgba(30, 199, 120, 0.8);
+    }
+
+    /* Сообщение «всё найдено» — над панелью */
+    .final-message {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 70px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(24, 108, 68, 0.9);
+      border: 1px solid rgba(133, 233, 174, 0.9);
+      font-size: 13px;
+      display: none;
+    }
+
+    .game-complete .final-message {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div class="image-container">
+      <!-- ТВОЙ ФОН -->
+      <img src="" alt="Фон" class="base-image" />
+
+      <!-- Слой с предметами -->
+      <div class="items-layer">
+        <!-- 18 правильных предметов (good1–good18.png) -->
+        <img src="good1.png"  class="item" data-type="good" alt="Good item 1">
+        <img src="good2.png"  class="item" data-type="good" alt="Good item 2">
+        <img src="good3.png"  class="item" data-type="good" alt="Good item 3">
+        <img src="good4.png"  class="item" data-type="good" alt="Good item 4">
+        <img src="good5.png"  class="item" data-type="good" alt="Good item 5">
+        <img src="good6.png"  class="item" data-type="good" alt="Good item 6">
+        <img src="good7.png"  class="item" data-type="good" alt="Good item 7">
+        <img src="good8.png"  class="item" data-type="good" alt="Good item 8">
+        <img src="good9.png"  class="item" data-type="good" alt="Good item 9">
+        <img src="good10.png" class="item" data-type="good" alt="Good item 10">
+        <img src="good11.png" class="item" data-type="good" alt="Good item 11">
+        <img src="good12.png" class="item" data-type="good" alt="Good item 12">
+        <img src="good13.png" class="item" data-type="good" alt="Good item 13">
+        <img src="good14.png" class="item" data-type="good" alt="Good item 14">
+        <img src="good15.png" class="item" data-type="good" alt="Good item 15">
+        <img src="good16.png" class="item" data-type="good" alt="Good item 16">
+        <img src="good17.png" class="item" data-type="good" alt="Good item 17">
+        <img src="good18.png" class="item" data-type="good" alt="Good item 18">
+
+        <!-- 82 неправильных предмета (bad1–bad82.png) -->
+        <!-- Просто потом заменишь картинки на свои -->
+        <img src="bad1.png"  class="item" data-type="bad" alt="Bad item 1">
+        <img src="bad2.png"  class="item" data-type="bad" alt="Bad item 2">
+        <img src="bad3.png"  class="item" data-type="bad" alt="Bad item 3">
+        <img src="bad4.png"  class="item" data-type="bad" alt="Bad item 4">
+        <img src="bad5.png"  class="item" data-type="bad" alt="Bad item 5">
+        <img src="bad6.png"  class="item" data-type="bad" alt="Bad item 6">
+        <img src="bad7.png"  class="item" data-type="bad" alt="Bad item 7">
+        <img src="bad8.png"  class="item" data-type="bad" alt="Bad item 8">
+        <img src="bad9.png"  class="item" data-type="bad" alt="Bad item 9">
+        <img src="bad10.png" class="item" data-type="bad" alt="Bad item 10">
+        <img src="bad11.png" class="item" data-type="bad" alt="Bad item 11">
+        <img src="bad12.png" class="item" data-type="bad" alt="Bad item 12">
+        <img src="bad13.png" class="item" data-type="bad" alt="Bad item 13">
+        <img src="bad14.png" class="item" data-type="bad" alt="Bad item 14">
+        <img src="bad15.png" class="item" data-type="bad" alt="Bad item 15">
+        <img src="bad16.png" class="item" data-type="bad" alt="Bad item 16">
+        <img src="bad17.png" class="item" data-type="bad" alt="Bad item 17">
+        <img src="bad18.png" class="item" data-type="bad" alt="Bad item 18">
+        <img src="bad19.png" class="item" data-type="bad" alt="Bad item 19">
+        <img src="bad20.png" class="item" data-type="bad" alt="Bad item 20">
+        <img src="bad21.png" class="item" data-type="bad" alt="Bad item 21">
+        <img src="bad22.png" class="item" data-type="bad" alt="Bad item 22">
+        <img src="bad23.png" class="item" data-type="bad" alt="Bad item 23">
+        <img src="bad24.png" class="item" data-type="bad" alt="Bad item 24">
+        <img src="bad25.png" class="item" data-type="bad" alt="Bad item 25">
+        <img src="bad26.png" class="item" data-type="bad" alt="Bad item 26">
+        <img src="bad27.png" class="item" data-type="bad" alt="Bad item 27">
+        <img src="bad28.png" class="item" data-type="bad" alt="Bad item 28">
+        <img src="bad29.png" class="item" data-type="bad" alt="Bad item 29">
+        <img src="bad30.png" class="item" data-type="bad" alt="Bad item 30">
+        <img src="bad31.png" class="item" data-type="bad" alt="Bad item 31">
+        <img src="bad32.png" class="item" data-type="bad" alt="Bad item 32">
+        <img src="bad33.png" class="item" data-type="bad" alt="Bad item 33">
+        <img src="bad34.png" class="item" data-type="bad" alt="Bad item 34">
+        <img src="bad35.png" class="item" data-type="bad" alt="Bad item 35">
+        <img src="bad36.png" class="item" data-type="bad" alt="Bad item 36">
+        <img src="bad37.png" class="item" data-type="bad" alt="Bad item 37">
+        <img src="bad38.png" class="item" data-type="bad" alt="Bad item 38">
+        <img src="bad39.png" class="item" data-type="bad" alt="Bad item 39">
+        <img src="bad40.png" class="item" data-type="bad" alt="Bad item 40">
+        <img src="bad41.png" class="item" data-type="bad" alt="Bad item 41">
+        <img src="bad42.png" class="item" data-type="bad" alt="Bad item 42">
+        <img src="bad43.png" class="item" data-type="bad" alt="Bad item 43">
+        <img src="bad44.png" class="item" data-type="bad" alt="Bad item 44">
+        <img src="bad45.png" class="item" data-type="bad" alt="Bad item 45">
+        <img src="bad46.png" class="item" data-type="bad" alt="Bad item 46">
+        <img src="bad47.png" class="item" data-type="bad" alt="Bad item 47">
+        <img src="bad48.png" class="item" data-type="bad" alt="Bad item 48">
+        <img src="bad49.png" class="item" data-type="bad" alt="Bad item 49">
+        <img src="bad50.png" class="item" data-type="bad" alt="Bad item 50">
+        <img src="bad51.png" class="item" data-type="bad" alt="Bad item 51">
+        <img src="bad52.png" class="item" data-type="bad" alt="Bad item 52">
+        <img src="bad53.png" class="item" data-type="bad" alt="Bad item 53">
+        <img src="bad54.png" class="item" data-type="bad" alt="Bad item 54">
+        <img src="bad55.png" class="item" data-type="bad" alt="Bad item 55">
+        <img src="bad56.png" class="item" data-type="bad" alt="Bad item 56">
+        <img src="bad57.png" class="item" data-type="bad" alt="Bad item 57">
+        <img src="bad58.png" class="item" data-type="bad" alt="Bad item 58">
+        <img src="bad59.png" class="item" data-type="bad" alt="Bad item 59">
+        <img src="bad60.png" class="item" data-type="bad" alt="Bad item 60">
+        <img src="bad61.png" class="item" data-type="bad" alt="Bad item 61">
+        <img src="bad62.png" class="item" data-type="bad" alt="Bad item 62">
+        <img src="bad63.png" class="item" data-type="bad" alt="Bad item 63">
+        <img src="bad64.png" class="item" data-type="bad" alt="Bad item 64">
+        <img src="bad65.png" class="item" data-type="bad" alt="Bad item 65">
+        <img src="bad66.png" class="item" data-type="bad" alt="Bad item 66">
+        <img src="bad67.png" class="item" data-type="bad" alt="Bad item 67">
+        <img src="bad68.png" class="item" data-type="bad" alt="Bad item 68">
+        <img src="bad69.png" class="item" data-type="bad" alt="Bad item 69">
+        <img src="bad70.png" class="item" data-type="bad" alt="Bad item 70">
+        <img src="bad71.png" class="item" data-type="bad" alt="Bad item 71">
+        <img src="bad72.png" class="item" data-type="bad" alt="Bad item 72">
+        <img src="bad73.png" class="item" data-type="bad" alt="Bad item 73">
+        <img src="bad74.png" class="item" data-type="bad" alt="Bad item 74">
+        <img src="bad75.png" class="item" data-type="bad" alt="Bad item 75">
+        <img src="bad76.png" class="item" data-type="bad" alt="Bad item 76">
+        <img src="bad77.png" class="item" data-type="bad" alt="Bad item 77">
+        <img src="bad78.png" class="item" data-type="bad" alt="Bad item 78">
+        <img src="bad79.png" class="item" data-type="bad" alt="Bad item 79">
+        <img src="bad80.png" class="item" data-type="bad" alt="Bad item 80">
+        <img src="bad81.png" class="item" data-type="bad" alt="Bad item 81">
+        <img src="bad82.png" class="item" data-type="bad" alt="Bad item 82">
+      </div>
+
+      <!-- Панель управления -->
+      <div class="ui-panel">
+        <div class="ui-left">
+          <div class="ui-title">Найди 18 спрятанных предметов 🔍</div>
+          <div class="ui-text" id="statusText">
+            Тапай по предметам на картинке. Правильные будут исчезать.
+          </div>
+        </div>
+        <div>
+          <button class="music-btn" id="musicToggle">Музыка ♫</button>
+          <div class="ui-counter" id="counter">Найдено 0 из 18</div>
+        </div>
+      </div>
+
+      <div class="final-message" id="finalMessage">
+        Браво! 🎉 Ты нашла все нужные предметы. Весь лишний хлам исчез — картинка стала чистой.
+      </div>
+    </div>
+
+    <!-- Фоновая музыка (замени music.mp3 на свой файл) -->
+    <audio id="bgMusic" src="music.mp3" loop></audio>
+  </div>
+
+  <script>
+    const game = document.getElementById('game');
+    const items = Array.from(document.querySelectorAll('.item'));
+    const statusText = document.getElementById('statusText');
+    const counterEl = document.getElementById('counter');
+    const finalMessage = document.getElementById('finalMessage');
+    const musicToggle = document.getElementById('musicToggle');
+    const bgMusic = document.getElementById('bgMusic');
+
+    const goodItems = items.filter(el => el.dataset.type === 'good');
+    const totalGood = goodItems.length;
+    let foundGood = 0;
+    let gameComplete = false;
+
+    // Рандомно раскидываем предметы по полю с небольшим наложением
+    function spreadItems() {
+      items.forEach((item, index) => {
+        const top = 8 + Math.random() * 84;   // 8–92% по вертикали
+        const left = 8 + Math.random() * 84;  // 8–92% по горизонтали
+        const size = 5 + Math.random() * 3;   // 5–8% ширины
+
+        item.style.top = top + '%';
+        item.style.left = left + '%';
+        item.style.width = size + '%';
+
+        // маленький разброс по z-index, чтобы было наложение
+        item.style.zIndex = 10 + Math.floor(Math.random() * 20);
+      });
+    }
+
+    spreadItems();
+
+    function updateCounter() {
+      counterEl.textContent = `Найдено ${foundGood} из ${totalGood}`;
+    }
+
+    updateCounter();
+
+    // Логика клика по предмету
+    items.forEach(item => {
+      item.addEventListener('click', () => {
+        if (gameComplete) return;
+
+        const isGood = item.dataset.type === 'good';
+
+        if (isGood) {
+          if (item.classList.contains('found')) return; // уже считали
+          item.classList.add('found');
+          foundGood++;
+          updateCounter();
+
+          if (foundGood === totalGood) {
+            // всё найдено — скрываем вообще ВСЕ предметы
+            gameComplete = true;
+            items.forEach(el => el.classList.add('found'));
+            statusText.textContent = 'Все нужные предметы найдены!';
+            game.classList.add('game-complete');
+          } else {
+            statusText.textContent = 'Отлично! Ищи остальные предметы 😉';
+          }
+        } else {
+          // неправильный предмет
+          item.classList.add('shake');
+          setTimeout(() => item.classList.remove('shake'), 250);
+          statusText.textContent = 'Это не тот предмет, попробуй другой 🙂';
+        }
+      });
+    });
+
+    // Музыка
+    let musicOn = false;
+
+    musicToggle.addEventListener('click', async () => {
+      try {
+        if (!musicOn) {
+          await bgMusic.play();
+          musicOn = true;
+          musicToggle.classList.add('active');
+          musicToggle.textContent = 'Музыка играет ♫';
+        } else {
+          bgMusic.pause();
+          musicOn = false;
+          musicToggle.classList.remove('active');
+          musicToggle.textContent = 'Музыка ♫';
+        }
+      } catch (e) {
+        console.log('Audio error:', e);
+      }
+    });
+  </script>
+</body>
+</html>
