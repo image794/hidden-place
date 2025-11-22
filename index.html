@@ -2,404 +2,339 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Найди спрятанные предметы</title>
+  <title>Найди предметы</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
-    * {
-      box-sizing: border-box;
+    :root {
+      color-scheme: dark;
     }
 
-    html, body {
-      margin: 0;
+    * {
+      box-sizing: border-box;
       padding: 0;
-      height: 100%;
+      margin: 0;
     }
 
     body {
-      background: #000;
+      margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      background: #000;
       overflow: hidden;
-      color: #f5f5f5;
     }
 
-    .game-wrapper {
+    .game {
       position: relative;
       width: 100vw;
-      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
-      background: #000;
-      touch-action: manipulation;
+      color: #fff;
     }
 
-    .base-image {
+    /* Фон */
+    .playfield {
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: brightness(0.95);
-      transition: filter 0.3s ease;
+      background-image: url("background.jpg");
+      background-size: cover;
+      background-position: center;
+      filter: blur(3px);
+      transform: scale(1.04);
+    }
+
+    .playfield-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 20%, rgba(0,0,0,0.45), rgba(0,0,0,0.9));
       z-index: 1;
     }
 
-    .items-layer {
+    /* Плитки */
+    .tiles-grid {
       position: absolute;
       inset: 0;
-      z-index: 5;
-      pointer-events: none;
-      transition: opacity 0.4s ease;
+      display: grid;
+
+      /* 13 строк × 10 колонок = 130 плиток */
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(13, 1fr);
+
+      z-index: 3;
+      pointer-events: auto;
+      transition: opacity 0.6s ease;
     }
 
-    .item {
-      position: absolute;
-      pointer-events: auto;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-drag: none;
-      /* базовый размер: от ширины контейнера */
-      width: 14%;
-      max-width: 120px;
-      border-radius: 22px;
-      background: rgba(10, 12, 20, 0.8);
-      border: 2px solid rgba(255, 255, 255, 0.18);
-      box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 0.5),
-        0 12px 25px rgba(0, 0, 0, 0.6);
+    .tiles-grid.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .tile {
+      background: #05080c;
+      border: none;
       overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .tile::before {
+      content: "";
+      position: absolute;
+      inset: 12%;
+      border-radius: 20px;
+      border: 2px solid rgba(255,255,255,0.22);
+      background: #111722;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.7),
+        0 14px 25px rgba(0,0,0,0.8);
+      opacity: 0.95;
+    }
+
+    .tile-img {
+      position: absolute;
+      inset: 20%;
+      object-fit: cover;
+      border-radius: 16px;
+      z-index: 2;
+    }
+
+    .tile-placeholder {
+      position: absolute;
+      inset: 28%;
+      background: #1f6feb;
+      border-radius: 50%;
+      color: #fff;
+      font-weight: bold;
       display: flex;
       align-items: center;
       justify-content: center;
-
-      --scale: 1;
-      transform: scale(var(--scale));
-      transition:
-        opacity 0.35s ease,
-        transform 0.35s ease,
-        box-shadow 0.2s ease;
+      font-size: 22px;
+      z-index: 3;
     }
 
-    .item img {
-      width: 80%;
-      height: 80%;
-      object-fit: cover;
+    .tile.tile-found {
+      animation: tileFound 0.45s ease forwards;
     }
 
-    .item:hover {
-      transform: scale(calc(var(--scale) * 1.05));
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.3),
-        0 14px 30px rgba(0, 0, 0, 0.9);
+    @keyframes tileFound {
+      0% { transform: scale(1); opacity: 1; }
+      60% { transform: scale(1.1); opacity: 0.9; }
+      100% { transform: scale(0.3); opacity: 0; }
     }
 
-    .item.found {
-      opacity: 0;
-      transform: scale(calc(var(--scale) * 0.55));
-      pointer-events: none;
-      box-shadow: none;
+    .tile.tile-wrong {
+      animation: tileWrong 0.35s ease;
     }
 
-    .item.bad.shake {
-      animation: shake 0.25s linear;
+    @keyframes tileWrong {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      50% { transform: translateX(4px); }
+      75% { transform: translateX(-3px); }
+      100% { transform: translateX(0); }
     }
 
-    @keyframes shake {
-      0%   { transform: translateX(0) scale(var(--scale)); }
-      25%  { transform: translateX(-4px) scale(var(--scale)); }
-      50%  { transform: translateX(4px) scale(var(--scale)); }
-      75%  { transform: translateX(-2px) scale(var(--scale)); }
-      100% { transform: translateX(0) scale(var(--scale)); }
-    }
-
-    .top-bar {
+    .top-ui {
       position: absolute;
-      left: env(safe-area-inset-left, 8px);
-      right: env(safe-area-inset-right, 8px);
-      top: env(safe-area-inset-top, 8px);
-      z-index: 20;
-      padding: 6px 10px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(18, 21, 40, 0.96), rgba(34, 40, 70, 0.96));
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      top: 8px;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 0 12px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      font-size: 13px;
+      pointer-events: none;
     }
 
-    .top-left {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .top-title {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-    }
-
-    .top-hint {
-      font-size: 12px;
-      opacity: 0.9;
-    }
-
-    .music-btn {
-      align-self: flex-start;
-      font-size: 12px;
-      padding: 4px 10px;
+    .pill {
+      pointer-events: auto;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      background: rgba(0, 0, 0, 0.25);
-      color: #f5f5f5;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .music-btn.active {
-      background: rgba(30, 199, 120, 0.25);
-      border-color: rgba(30, 199, 120, 0.9);
-    }
-
-    .counter-pill {
-      font-size: 12px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      background: rgba(0, 0, 0, 0.3);
+      padding: 6px 12px;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(30,30,40,0.9);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.7);
       white-space: nowrap;
+    }
+
+    .headline {
+      position: absolute;
+      top: 50px;
+      width: 100%;
+      text-align: center;
+      z-index: 10;
+      pointer-events: none;
+      font-size: 15px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.9);
     }
 
     .final-message {
       position: absolute;
-      left: 50%;
-      bottom: env(safe-area-inset-bottom, 14px);
-      transform: translateX(-50%);
-      z-index: 20;
-      padding: 10px 14px;
-      max-width: calc(100% - 32px);
-      border-radius: 14px;
-      background: rgba(30, 199, 120, 0.15);
-      border: 1px solid rgba(30, 199, 120, 0.7);
-      font-size: 13px;
-      text-align: center;
+      left: 12px;
+      right: 12px;
+      bottom: 18px;
+      z-index: 10;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid rgba(66,193,110,0.8);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
       display: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.9);
     }
 
-    .game-complete .final-message {
+    .final-message.show {
       display: block;
-    }
-
-    .game-complete .items-layer {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .game-complete .base-image {
-      filter: brightness(1.05);
-    }
-
-    @media (min-width: 900px) {
-      .game-wrapper {
-        width: 430px;
-        height: 932px;
-        border-radius: 24px;
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
-      }
     }
   </style>
 </head>
 <body>
-  <div class="game-wrapper" id="game">
-    <img src="background.jpg" alt="Фон" class="base-image" />
+  <div class="game">
+    <div class="playfield"></div>
+    <div class="playfield-overlay"></div>
 
-    <div class="items-layer" id="itemsLayer">
-      <!-- Карточки-предметы создаются через JS -->
+    <div class="tiles-grid" id="tilesGrid">
+
+      <!-- 🔥 40 ПРАВИЛЬНЫХ КАРТИНОК -->
+      <!-- Просто загрузи good1.jpg … good40.jpg -->
+      <!-- Можешь менять названия прямо тут, если другой формат -->
+
+      <!-- 1–10 -->
+      <button class="tile" data-correct="true"><img class="tile-img" src="good1.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good2.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good3.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good4.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good5.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good6.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good7.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good8.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good9.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good10.jpg"></button>
+
+      <!-- 11–20 -->
+      <button class="tile" data-correct="true"><img class="tile-img" src="good11.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good12.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good13.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good14.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good15.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good16.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good17.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good18.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good19.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good20.jpg"></button>
+
+      <!-- 21–30 -->
+      <button class="tile" data-correct="true"><img class="tile-img" src="good21.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good22.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good23.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good24.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good25.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good26.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good27.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good28.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good29.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good30.jpg"></button>
+
+      <!-- 31–40 -->
+      <button class="tile" data-correct="true"><img class="tile-img" src="good31.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good32.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good33.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good34.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good35.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good36.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good37.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good38.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good39.jpg"></button>
+      <button class="tile" data-correct="true"><img class="tile-img" src="good40.jpg"></button>
+
+      <!-- Остальные 83 неправильных создаём в JS -->
     </div>
 
-    <div class="top-bar">
-      <div class="top-left">
-        <button class="music-btn" id="musicToggle">Включить музыку 🎵</button>
-        <div class="top-hint">Нажимай на правильные предметы, чтобы они исчезали.</div>
+    <div class="top-ui">
+      <div class="pill">
+        <button id="musicToggle" style="all:unset;cursor:pointer;">Включить музыку 🎵</button>
       </div>
-      <div class="counter-pill" id="counter">Найдено 0 из 18</div>
+      <div class="pill" id="counter">Найдено 0 из 40</div>
     </div>
 
-    <div class="final-message" id="finalMessage">
-      Браво! 🎉 Ты нашла все предметы. Картинка теперь чистая — можно переходить к следующему заданию.
+    <div class="headline">
+      Нажимай на правильные предметы, чтобы они исчезали.
+    </div>
+
+    <div class="final-message" id="finalMsg">
+      Браво! 🎉 Ты нашла все предметы. Фон открыт!
     </div>
 
     <audio id="bgMusic" src="music.mp3" loop></audio>
   </div>
 
   <script>
-    // ===== НАСТРОЙКИ ИГРЫ =====
-    const GOOD_COUNT = 18;
-    const TOTAL_ITEMS = 100; // 18 правильных + 82 неправильных
+    const GOOD_COUNT = 40;
+    const TOTAL_TILES = 123;
+    const BAD_COUNT = TOTAL_TILES - GOOD_COUNT;
 
-    // СЮДА ВПИШИ ИМЕНА СВОИХ 18 ПРАВИЛЬНЫХ КАРТИНОК (файлы лежат рядом с index.html)
-    const goodImages = [
-      "good1.jpg",
-      "good2.jpg",
-      "good3.jpg",
-      "good4.jpg",
-      "good5.jpg",
-      "good6.jpg",
-      "good7.jpg",
-      "good8.jpg",
-      "good9.jpg",
-      "good10.jpg",
-      "good11.jpg",
-      "good12.jpg",
-      "good13.jpg",
-      "good14.jpg",
-      "good15.jpg",
-      "good16.jpg",
-      "good17.jpg",
-      "good18.jpg"
-    ];
+    const tilesGrid = document.getElementById('tilesGrid');
+    const counter = document.getElementById('counter');
+    const finalMsg = document.getElementById('finalMsg');
+    const musicToggle = document.getElementById('musicToggle');
+    const bgMusic = document.getElementById('bgMusic');
 
-    // Картинка-заглушка для неправильных предметов (можешь поменять на свою)
-    const badPlaceholder = "https://i.imgur.com/1Yc5Z6v.png";
+    // создаём 83 неправильных
+    for (let i = 0; i < BAD_COUNT; i++) {
+      const t = document.createElement('button');
+      t.className = "tile";
+      t.dataset.correct = "false";
 
-    const game = document.getElementById("game");
-    const itemsLayer = document.getElementById("itemsLayer");
-    const counterEl = document.getElementById("counter");
-    const finalMessage = document.getElementById("finalMessage");
-    const musicToggle = document.getElementById("musicToggle");
-    const bgMusic = document.getElementById("bgMusic");
+      const p = document.createElement('div');
+      p.className = "tile-placeholder";
+      p.textContent = "?";
+      t.appendChild(p);
 
-    let foundGood = 0;
-    let musicOn = false;
-
-    function shuffle(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
+      tilesGrid.appendChild(t);
     }
 
-    function updateCounter() {
-      counterEl.textContent = `Найдено ${foundGood} из ${GOOD_COUNT}`;
-    }
+    // перемешиваем все плитки
+    const tiles = Array.from(tilesGrid.children);
+    tiles.sort(() => Math.random() - 0.5);
+    tiles.forEach(t => tilesGrid.appendChild(t));
 
-    function createItems() {
-      const positions = [];
+    let found = 0;
+    counter.textContent = `Найдено ${found} из ${GOOD_COUNT}`;
 
-      const COLS = 10;
-      const ROWS = 10;
+    tiles.forEach(tile => {
+      tile.addEventListener('click', () => {
+        if (tile.dataset.correct === "true") {
+          if (tile.classList.contains("tile-found")) return;
 
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          positions.push({ r, c });
-        }
-      }
+          tile.classList.add("tile-found");
+          found++;
+          counter.textContent = `Найдено ${found} из ${GOOD_COUNT}`;
 
-      shuffle(positions);
-
-      const flags = Array(TOTAL_ITEMS)
-        .fill(false)
-        .map((_, i) => i < GOOD_COUNT); // первые 18 — правильные
-      shuffle(flags); // перемешиваем, чтобы правильные были не подряд
-
-      for (let i = 0; i < TOTAL_ITEMS; i++) {
-        const isGood = flags[i];
-        const pos = positions[i];
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "item " + (isGood ? "good" : "bad");
-        wrapper.dataset.correct = isGood ? "1" : "0";
-
-        const img = document.createElement("img");
-        if (isGood) {
-          const idx = i % goodImages.length;
-          img.src = goodImages[idx];
+          if (found === GOOD_COUNT) {
+            tilesGrid.classList.add("hidden");
+            finalMsg.classList.add("show");
+          }
         } else {
-          img.src = badPlaceholder;
-        }
-        wrapper.appendChild(img);
-
-        // позиция в процентах с небольшим рандомным смещением
-        const cellWidth = 100 / COLS;
-        const cellHeight = 100 / ROWS;
-
-        const jitterX = (Math.random() - 0.5) * 12; // +/- %
-        const jitterY = (Math.random() - 0.5) * 12;
-
-        const left = (pos.c + 0.5) * cellWidth + jitterX;
-        const top = (pos.r + 0.5) * cellHeight + jitterY;
-
-        wrapper.style.left = left + "%";
-        wrapper.style.top = top + "%";
-        wrapper.style.transformOrigin = "50% 50%";
-
-        // лёгкий разброс по размеру
-        const scale = 0.9 + Math.random() * 0.4; // 0.9–1.3
-        wrapper.style.setProperty("--scale", scale.toString());
-
-        itemsLayer.appendChild(wrapper);
-      }
-    }
-
-    function handleItemClick(e) {
-      const target = e.target.closest(".item");
-      if (!target) return;
-
-      const isGood = target.dataset.correct === "1";
-
-      if (isGood) {
-        if (target.classList.contains("found")) return;
-        target.classList.add("found");
-        foundGood++;
-        updateCounter();
-
-        if (foundGood === GOOD_COUNT) {
-          // все правильные найдены
-          game.classList.add("game-complete");
-        }
-      } else {
-        target.classList.remove("shake");
-        void target.offsetWidth; // перезапустить анимацию
-        target.classList.add("shake");
-      }
-    }
-
-    function setupMusic() {
-      musicToggle.addEventListener("click", () => {
-        if (!bgMusic.src) return;
-
-        if (musicOn) {
-          bgMusic.pause();
-          musicOn = false;
-          musicToggle.classList.remove("active");
-          musicToggle.textContent = "Включить музыку 🎵";
-        } else {
-          bgMusic
-            .play()
-            .then(() => {
-              musicOn = true;
-              musicToggle.classList.add("active");
-              musicToggle.textContent = "Выключить музыку 🔇";
-            })
-            .catch(() => {
-              // мобильный Safari может не дать авто-плей без взаимодействия —
-              // но кнопка уже является кликом, так что обычно всё норм
-            });
+          tile.classList.remove("tile-wrong");
+          void tile.offsetWidth;
+          tile.classList.add("tile-wrong");
         }
       });
-    }
+    });
 
-    // Инициализация
-    createItems();
-    updateCounter();
-    itemsLayer.addEventListener("click", handleItemClick);
-    setupMusic();
+    let musicOn = false;
+    musicToggle.addEventListener("click", async () => {
+      try {
+        if (!musicOn) {
+          await bgMusic.play();
+          musicOn = true;
+          musicToggle.textContent = "Выключить музыку 🔇";
+        } else {
+          bgMusic.pause();
+          musicOn = false;
+          musicToggle.textContent = "Включить музыку 🎵";
+        }
+      } catch {}
+    });
   </script>
 </body>
 </html>
