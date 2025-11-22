@@ -1,340 +1,476 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Найди предметы</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <style>
-    :root {
-      color-scheme: dark;
-    }
+  <meta charset="UTF-8">
+  <title>Игра: найди предметы</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
+  <style>
     * {
       box-sizing: border-box;
-      padding: 0;
+    }
+
+    html, body {
       margin: 0;
+      padding: 0;
+      height: 100%;
     }
 
     body {
-      margin: 0;
+      background: #05060a;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #000;
-      overflow: hidden;
+      color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
     }
 
-    .game {
-      position: relative;
+    .game-root {
       width: 100vw;
-      height: 100dvh;
+      height: 100vh;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
       overflow: hidden;
-      color: #fff;
     }
 
-    /* Фон */
-    .playfield {
-      position: absolute;
-      inset: 0;
-      background-image: url("background.jpg");
-      background-size: cover;
-      background-position: center;
-      filter: blur(3px);
-      transform: scale(1.04);
+    .top-bar {
+      width: 100%;
+      max-width: 600px;
+      padding: 8px 12px;
+      margin: 2px 0 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-radius: 12px;
+      background: rgba(5, 6, 15, 0.94);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+      font-size: 13px;
+      z-index: 5;
     }
 
-    .playfield-overlay {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 50% 20%, rgba(0,0,0,0.45), rgba(0,0,0,0.9));
-      z-index: 1;
+    .top-title {
+      font-weight: 600;
+      font-size: 14px;
     }
 
-    /* Плитки */
-    .tiles-grid {
+    .top-sub {
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    .top-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .counter {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(0, 0, 0, 0.5);
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .music-toggle {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(20, 25, 60, 0.8);
+      padding: 4px 10px;
+      font-size: 12px;
+      color: #f5f5f5;
+      cursor: pointer;
+    }
+
+    .music-toggle:active {
+      transform: scale(0.97);
+    }
+
+    .game-area {
+      width: 100%;
+      max-width: 600px;
+      flex: 1;
+      padding: 2px 8px 8px;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .image-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.75);
+      background: #000;
+    }
+
+    /* Фон: твоя главная картинка (то, что откроется "по-настоящему") */
+    .base-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.95);
+      transition: filter 0.35s ease;
+    }
+
+    /* Слой с предметами */
+    .items-layer {
       position: absolute;
       inset: 0;
-      display: grid;
+      pointer-events: none; /* клики идут по самим item, не по слою */
+    }
 
-      /* 13 строк × 10 колонок = 130 плиток */
-      grid-template-columns: repeat(10, 1fr);
-      grid-template-rows: repeat(13, 1fr);
-
-      z-index: 3;
+    .item {
+      position: absolute;
       pointer-events: auto;
-      transition: opacity 0.6s ease;
+      user-select: none;
+      -webkit-user-drag: none;
+      cursor: pointer;
+      transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease,
+        opacity 0.35s ease;
+      /* лёгкая тень, чтобы было видно, что это накладной объект */
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.65);
     }
 
-    .tiles-grid.hidden {
+    .item:active {
+      transform: scale(0.95);
+    }
+
+    .item.good.found {
+      opacity: 0;
+      transform: scale(0.7) rotate(-4deg);
+      pointer-events: none;
+      box-shadow: none;
+    }
+
+    /* когда игра закончена — прячем все предметы разом */
+    .items-hidden .item {
       opacity: 0;
       pointer-events: none;
     }
 
-    .tile {
-      background: #05080c;
-      border: none;
-      overflow: hidden;
-      cursor: pointer;
-      position: relative;
+    /* "плохие" при ошибочном клике потрясти */
+    .item.bad.wrong {
+      animation: shake 0.25s;
     }
 
-    .tile::before {
-      content: "";
-      position: absolute;
-      inset: 12%;
-      border-radius: 20px;
-      border: 2px solid rgba(255,255,255,0.22);
-      background: #111722;
-      box-shadow:
-        0 0 0 1px rgba(0,0,0,0.7),
-        0 14px 25px rgba(0,0,0,0.8);
-      opacity: 0.95;
-    }
-
-    .tile-img {
-      position: absolute;
-      inset: 20%;
-      object-fit: cover;
-      border-radius: 16px;
-      z-index: 2;
-    }
-
-    .tile-placeholder {
-      position: absolute;
-      inset: 28%;
-      background: #1f6feb;
-      border-radius: 50%;
-      color: #fff;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      z-index: 3;
-    }
-
-    .tile.tile-found {
-      animation: tileFound 0.45s ease forwards;
-    }
-
-    @keyframes tileFound {
-      0% { transform: scale(1); opacity: 1; }
-      60% { transform: scale(1.1); opacity: 0.9; }
-      100% { transform: scale(0.3); opacity: 0; }
-    }
-
-    .tile.tile-wrong {
-      animation: tileWrong 0.35s ease;
-    }
-
-    @keyframes tileWrong {
+    @keyframes shake {
       0% { transform: translateX(0); }
       25% { transform: translateX(-4px); }
       50% { transform: translateX(4px); }
-      75% { transform: translateX(-3px); }
+      75% { transform: translateX(-2px); }
       100% { transform: translateX(0); }
     }
 
-    .top-ui {
+    .final-overlay {
       position: absolute;
-      top: 8px;
-      left: 0;
-      right: 0;
-      z-index: 10;
-      padding: 0 12px;
+      inset: 0;
       display: flex;
-      justify-content: space-between;
-      pointer-events: none;
-    }
-
-    .pill {
-      pointer-events: auto;
-      border-radius: 999px;
-      padding: 6px 12px;
-      font-size: 13px;
-      border: 1px solid rgba(255,255,255,0.25);
-      background: rgba(30,30,40,0.9);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.7);
-      white-space: nowrap;
-    }
-
-    .headline {
-      position: absolute;
-      top: 50px;
-      width: 100%;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
       text-align: center;
-      z-index: 10;
+      background: radial-gradient(circle at 50% 20%, rgba(0,0,0,0.1), rgba(0,0,0,0.8));
+      opacity: 0;
       pointer-events: none;
-      font-size: 15px;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+      transition: opacity 0.4s ease;
+      color: #fefefe;
     }
 
-    .final-message {
-      position: absolute;
-      left: 12px;
-      right: 12px;
-      bottom: 18px;
-      z-index: 10;
-      background: rgba(0,0,0,0.8);
-      border: 1px solid rgba(66,193,110,0.8);
-      border-radius: 12px;
-      padding: 12px 14px;
+    .final-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .final-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .final-text {
       font-size: 14px;
-      display: none;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+      opacity: 0.95;
     }
 
-    .final-message.show {
-      display: block;
+    .game-complete .base-image {
+      filter: brightness(1.05);
     }
   </style>
 </head>
+
 <body>
-  <div class="game">
-    <div class="playfield"></div>
-    <div class="playfield-overlay"></div>
+<div class="game-root" id="gameRoot">
 
-    <div class="tiles-grid" id="tilesGrid">
-
-      <!-- 🔥 40 ПРАВИЛЬНЫХ КАРТИНОК -->
-      <!-- Просто загрузи good1.jpg … good40.jpg -->
-      <!-- Можешь менять названия прямо тут, если другой формат -->
-
-      <!-- 1–10 -->
-      <button class="tile" data-correct="true"><img class="tile-img" src="good1.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good2.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good3.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good4.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good5.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good6.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good7.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good8.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good9.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good10.jpg"></button>
-
-      <!-- 11–20 -->
-      <button class="tile" data-correct="true"><img class="tile-img" src="good11.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good12.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good13.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good14.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good15.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good16.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good17.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good18.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good19.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good20.jpg"></button>
-
-      <!-- 21–30 -->
-      <button class="tile" data-correct="true"><img class="tile-img" src="good21.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good22.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good23.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good24.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good25.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good26.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good27.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good28.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good29.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good30.jpg"></button>
-
-      <!-- 31–40 -->
-      <button class="tile" data-correct="true"><img class="tile-img" src="good31.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good32.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good33.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good34.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good35.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good36.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good37.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good38.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good39.jpg"></button>
-      <button class="tile" data-correct="true"><img class="tile-img" src="good40.jpg"></button>
-
-      <!-- Остальные 83 неправильных создаём в JS -->
-    </div>
-
-    <div class="top-ui">
-      <div class="pill">
-        <button id="musicToggle" style="all:unset;cursor:pointer;">Включить музыку 🎵</button>
+  <!-- Верхняя панель -->
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="top-title">Найди все нужные предметы 🔍</div>
+      <div class="top-sub" id="statusText">
+        Нажимай по правильным предметам, чтобы они исчезали.
       </div>
-      <div class="pill" id="counter">Найдено 0 из 40</div>
     </div>
-
-    <div class="headline">
-      Нажимай на правильные предметы, чтобы они исчезали.
+    <div class="top-right">
+      <button class="music-toggle" id="musicToggle">Музыка выкл</button>
+      <div class="counter" id="counter">Найдено 0 из 40</div>
     </div>
-
-    <div class="final-message" id="finalMsg">
-      Браво! 🎉 Ты нашла все предметы. Фон открыт!
-    </div>
-
-    <audio id="bgMusic" src="music.mp3" loop></audio>
   </div>
 
-  <script>
-    const GOOD_COUNT = 40;
-    const TOTAL_TILES = 123;
-    const BAD_COUNT = TOTAL_TILES - GOOD_COUNT;
+  <!-- Область игры (фон + предметы) -->
+  <div class="game-area">
+    <div class="image-container" id="imageContainer">
 
-    const tilesGrid = document.getElementById('tilesGrid');
-    const counter = document.getElementById('counter');
-    const finalMsg = document.getElementById('finalMsg');
-    const musicToggle = document.getElementById('musicToggle');
-    const bgMusic = document.getElementById('bgMusic');
+      <!-- ТВОЙ ФОН -->
+      <!-- Если файл называется не background.jpg — поменяй здесь имя -->
+      <img src="background.jpg" alt="Фон" class="base-image">
 
-    // создаём 83 неправильных
-    for (let i = 0; i < BAD_COUNT; i++) {
-      const t = document.createElement('button');
-      t.className = "tile";
-      t.dataset.correct = "false";
+      <!-- Слой с предметами -->
+      <div class="items-layer">
 
-      const p = document.createElement('div');
-      p.className = "tile-placeholder";
-      p.textContent = "?";
-      t.appendChild(p);
+        <!-- 40 правильных предметов (good1.jpg … good40.jpg) -->
+        <!-- Можешь двигать каждый: меняй top / left / width -->
 
-      tilesGrid.appendChild(t);
+        <!-- good 1–40 -->
+        <img src="good1.jpg" class="item good" alt="Хороший предмет 1" style="top: 3.0%; left: 2.0%; width: 28%; ">
+        <img src="good2.jpg" class="item good" alt="Хороший предмет 2" style="top: 3.0%; left: 11.6%; width: 30%; ">
+        <img src="good3.jpg" class="item good" alt="Хороший предмет 3" style="top: 3.0%; left: 21.2%; width: 26%; ">
+        <img src="good4.jpg" class="item good" alt="Хороший предмет 4" style="top: 3.0%; left: 30.8%; width: 32%; ">
+        <img src="good5.jpg" class="item good" alt="Хороший предмет 5" style="top: 3.0%; left: 40.4%; width: 28%; ">
+        <img src="good6.jpg" class="item good" alt="Хороший предмет 6" style="top: 3.0%; left: 50.0%; width: 30%; ">
+        <img src="good7.jpg" class="item good" alt="Хороший предмет 7" style="top: 3.0%; left: 59.6%; width: 26%; ">
+        <img src="good8.jpg" class="item good" alt="Хороший предмет 8" style="top: 3.0%; left: 69.2%; width: 32%; ">
+        <img src="good9.jpg" class="item good" alt="Хороший предмет 9" style="top: 3.0%; left: 78.8%; width: 28%; ">
+        <img src="good10.jpg" class="item good" alt="Хороший предмет 10" style="top: 3.0%; left: 88.4%; width: 30%; ">
+
+        <img src="good11.jpg" class="item good" alt="Хороший предмет 11" style="top: 11.6%; left: 2.0%; width: 26%; ">
+        <img src="good12.jpg" class="item good" alt="Хороший предмет 12" style="top: 11.6%; left: 11.6%; width: 32%; ">
+        <img src="good13.jpg" class="item good" alt="Хороший предмет 13" style="top: 11.6%; left: 21.2%; width: 28%; ">
+        <img src="good14.jpg" class="item good" alt="Хороший предмет 14" style="top: 11.6%; left: 30.8%; width: 30%; ">
+        <img src="good15.jpg" class="item good" alt="Хороший предмет 15" style="top: 11.6%; left: 40.4%; width: 26%; ">
+        <img src="good16.jpg" class="item good" alt="Хороший предмет 16" style="top: 11.6%; left: 50.0%; width: 32%; ">
+        <img src="good17.jpg" class="item good" alt="Хороший предмет 17" style="top: 11.6%; left: 59.6%; width: 28%; ">
+        <img src="good18.jpg" class="item good" alt="Хороший предмет 18" style="top: 11.6%; left: 69.2%; width: 30%; ">
+        <img src="good19.jpg" class="item good" alt="Хороший предмет 19" style="top: 11.6%; left: 78.8%; width: 26%; ">
+        <img src="good20.jpg" class="item good" alt="Хороший предмет 20" style="top: 11.6%; left: 88.4%; width: 32%; ">
+
+        <img src="good21.jpg" class="item good" alt="Хороший предмет 21" style="top: 20.2%; left: 2.0%; width: 28%; ">
+        <img src="good22.jpg" class="item good" alt="Хороший предмет 22" style="top: 20.2%; left: 11.6%; width: 30%; ">
+        <img src="good23.jpg" class="item good" alt="Хороший предмет 23" style="top: 20.2%; left: 21.2%; width: 26%; ">
+        <img src="good24.jpg" class="item good" alt="Хороший предмет 24" style="top: 20.2%; left: 30.8%; width: 32%; ">
+        <img src="good25.jpg" class="item good" alt="Хороший предмет 25" style="top: 20.2%; left: 40.4%; width: 28%; ">
+        <img src="good26.jpg" class="item good" alt="Хороший предмет 26" style="top: 20.2%; left: 50.0%; width: 30%; ">
+        <img src="good27.jpg" class="item good" alt="Хороший предмет 27" style="top: 20.2%; left: 59.6%; width: 26%; ">
+        <img src="good28.jpg" class="item good" alt="Хороший предмет 28" style="top: 20.2%; left: 69.2%; width: 32%; ">
+        <img src="good29.jpg" class="item good" alt="Хороший предмет 29" style="top: 20.2%; left: 78.8%; width: 28%; ">
+        <img src="good30.jpg" class="item good" alt="Хороший предмет 30" style="top: 20.2%; left: 88.4%; width: 30%; ">
+
+        <img src="good31.jpg" class="item good" alt="Хороший предмет 31" style="top: 28.6%; left: 2.0%; width: 26%; ">
+        <img src="good32.jpg" class="item good" alt="Хороший предмет 32" style="top: 28.6%; left: 11.6%; width: 32%; ">
+        <img src="good33.jpg" class="item good" alt="Хороший предмет 33" style="top: 28.6%; left: 21.2%; width: 28%; ">
+        <img src="good34.jpg" class="item good" alt="Хороший предмет 34" style="top: 28.6%; left: 30.8%; width: 30%; ">
+        <img src="good35.jpg" class="item good" alt="Хороший предмет 35" style="top: 28.6%; left: 40.4%; width: 26%; ">
+        <img src="good36.jpg" class="item good" alt="Хороший предмет 36" style="top: 28.6%; left: 50.0%; width: 32%; ">
+        <img src="good37.jpg" class="item good" alt="Хороший предмет 37" style="top: 28.6%; left: 59.6%; width: 28%; ">
+        <img src="good38.jpg" class="item good" alt="Хороший предмет 38" style="top: 28.6%; left: 69.2%; width: 30%; ">
+        <img src="good39.jpg" class="item good" alt="Хороший предмет 39" style="top: 28.6%; left: 78.8%; width: 26%; ">
+        <img src="good40.jpg" class="item good" alt="Хороший предмет 40" style="top: 28.6%; left: 88.4%; width: 32%; ">
+
+        <!-- 83 неправильных предмета (bad1.jpg … bad83.jpg) -->
+
+        <img src="bad1.jpg" class="item bad" alt="Лишний предмет 1" style="top: 28.6%; left: 98.0%; width: 28%; ">
+        <img src="bad2.jpg" class="item bad" alt="Лишний предмет 2" style="top: 37.2%; left: 2.0%; width: 30%; ">
+        <img src="bad3.jpg" class="item bad" alt="Лишний предмет 3" style="top: 37.2%; left: 11.6%; width: 26%; ">
+        <img src="bad4.jpg" class="item bad" alt="Лишний предмет 4" style="top: 37.2%; left: 21.2%; width: 32%; ">
+        <img src="bad5.jpg" class="item bad" alt="Лишний предмет 5" style="top: 37.2%; left: 30.8%; width: 28%; ">
+        <img src="bad6.jpg" class="item bad" alt="Лишний предмет 6" style="top: 37.2%; left: 40.4%; width: 30%; ">
+        <img src="bad7.jpg" class="item bad" alt="Лишний предмет 7" style="top: 37.2%; left: 50.0%; width: 26%; ">
+        <img src="bad8.jpg" class="item bad" alt="Лишний предмет 8" style="top: 37.2%; left: 59.6%; width: 32%; ">
+        <img src="bad9.jpg" class="item bad" alt="Лишний предмет 9" style="top: 37.2%; left: 69.2%; width: 28%; ">
+        <img src="bad10.jpg" class="item bad" alt="Лишний предмет 10" style="top: 37.2%; left: 78.8%; width: 30%; ">
+
+        <img src="bad11.jpg" class="item bad" alt="Лишний предмет 11" style="top: 37.2%; left: 88.4%; width: 26%; ">
+        <img src="bad12.jpg" class="item bad" alt="Лишний предмет 12" style="top: 37.2%; left: 98.0%; width: 32%; ">
+        <img src="bad13.jpg" class="item bad" alt="Лишний предмет 13" style="top: 45.8%; left: 2.0%; width: 28%; ">
+        <img src="bad14.jpg" class="item bad" alt="Лишний предмет 14" style="top: 45.8%; left: 11.6%; width: 30%; ">
+        <img src="bad15.jpg" class="item bad" alt="Лишний предмет 15" style="top: 45.8%; left: 21.2%; width: 26%; ">
+        <img src="bad16.jpg" class="item bad" alt="Лишний предмет 16" style="top: 45.8%; left: 30.8%; width: 32%; ">
+        <img src="bad17.jpg" class="item bad" alt="Лишний предмет 17" style="top: 45.8%; left: 40.4%; width: 28%; ">
+        <img src="bad18.jpg" class="item bad" alt="Лишний предмет 18" style="top: 45.8%; left: 50.0%; width: 30%; ">
+        <img src="bad19.jpg" class="item bad" alt="Лишний предмет 19" style="top: 45.8%; left: 59.6%; width: 26%; ">
+        <img src="bad20.jpg" class="item bad" alt="Лишний предмет 20" style="top: 45.8%; left: 69.2%; width: 32%; ">
+
+        <img src="bad21.jpg" class="item bad" alt="Лишний предмет 21" style="top: 45.8%; left: 78.8%; width: 28%; ">
+        <img src="bad22.jpg" class="item bad" alt="Лишний предмет 22" style="top: 45.8%; left: 88.4%; width: 30%; ">
+        <img src="bad23.jpg" class="item bad" alt="Лишний предмет 23" style="top: 45.8%; left: 98.0%; width: 26%; ">
+        <img src="bad24.jpg" class="item bad" alt="Лишний предмет 24" style="top: 54.3%; left: 2.0%; width: 32%; ">
+        <img src="bad25.jpg" class="item bad" alt="Лишний предмет 25" style="top: 54.3%; left: 11.6%; width: 28%; ">
+        <img src="bad26.jpg" class="item bad" alt="Лишний предмет 26" style="top: 54.3%; left: 21.2%; width: 30%; ">
+        <img src="bad27.jpg" class="item bad" alt="Лишний предмет 27" style="top: 54.3%; left: 30.8%; width: 26%; ">
+        <img src="bad28.jpg" class="item bad" alt="Лишний предмет 28" style="top: 54.3%; left: 40.4%; width: 32%; ">
+        <img src="bad29.jpg" class="item bad" alt="Лишний предмет 29" style="top: 54.3%; left: 50.0%; width: 28%; ">
+        <img src="bad30.jpg" class="item bad" alt="Лишний предмет 30" style="top: 54.3%; left: 59.6%; width: 30%; ">
+
+        <img src="bad31.jpg" class="item bad" alt="Лишний предмет 31" style="top: 54.3%; left: 69.2%; width: 26%; ">
+        <img src="bad32.jpg" class="item bad" alt="Лишний предмет 32" style="top: 54.3%; left: 78.8%; width: 32%; ">
+        <img src="bad33.jpg" class="item bad" alt="Лишний предмет 33" style="top: 54.3%; left: 88.4%; width: 28%; ">
+        <img src="bad34.jpg" class="item bad" alt="Лишний предмет 34" style="top: 54.3%; left: 98.0%; width: 30%; ">
+        <img src="bad35.jpg" class="item bad" alt="Лишний предмет 35" style="top: 62.9%; left: 2.0%; width: 26%; ">
+        <img src="bad36.jpg" class="item bad" alt="Лишний предмет 36" style="top: 62.9%; left: 11.6%; width: 32%; ">
+        <img src="bad37.jpg" class="item bad" alt="Лишний предмет 37" style="top: 62.9%; left: 21.2%; width: 28%; ">
+        <img src="bad38.jpg" class="item bad" alt="Лишний предмет 38" style="top: 62.9%; left: 30.8%; width: 30%; ">
+        <img src="bad39.jpg" class="item bad" alt="Лишний предмет 39" style="top: 62.9%; left: 40.4%; width: 26%; ">
+        <img src="bad40.jpg" class="item bad" alt="Лишний предмет 40" style="top: 62.9%; left: 50.0%; width: 32%; ">
+
+        <img src="bad41.jpg" class="item bad" alt="Лишний предмет 41" style="top: 62.9%; left: 59.6%; width: 28%; ">
+        <img src="bad42.jpg" class="item bad" alt="Лишний предмет 42" style="top: 62.9%; left: 69.2%; width: 30%; ">
+        <img src="bad43.jpg" class="item bad" alt="Лишний предмет 43" style="top: 62.9%; left: 78.8%; width: 26%; ">
+        <img src="bad44.jpg" class="item bad" alt="Лишний предмет 44" style="top: 62.9%; left: 88.4%; width: 32%; ">
+        <img src="bad45.jpg" class="item bad" alt="Лишний предмет 45" style="top: 62.9%; left: 98.0%; width: 28%; ">
+        <img src="bad46.jpg" class="item bad" alt="Лишний предмет 46" style="top: 71.4%; left: 2.0%; width: 30%; ">
+        <img src="bad47.jpg" class="item bad" alt="Лишний предмет 47" style="top: 71.4%; left: 11.6%; width: 26%; ">
+        <img src="bad48.jpg" class="item bad" alt="Лишний предмет 48" style="top: 71.4%; left: 21.2%; width: 32%; ">
+        <img src="bad49.jpg" class="item bad" alt="Лишний предмет 49" style="top: 71.4%; left: 30.8%; width: 28%; ">
+        <img src="bad50.jpg" class="item bad" alt="Лишний предмет 50" style="top: 71.4%; left: 40.4%; width: 30%; ">
+
+        <img src="bad51.jpg" class="item bad" alt="Лишний предмет 51" style="top: 71.4%; left: 50.0%; width: 26%; ">
+        <img src="bad52.jpg" class="item bad" alt="Лишний предмет 52" style="top: 71.4%; left: 59.6%; width: 32%; ">
+        <img src="bad53.jpg" class="item bad" alt="Лишний предмет 53" style="top: 71.4%; left: 69.2%; width: 28%; ">
+        <img src="bad54.jpg" class="item bad" alt="Лишний предмет 54" style="top: 71.4%; left: 78.8%; width: 30%; ">
+        <img src="bad55.jpg" class="item bad" alt="Лишний предмет 55" style="top: 71.4%; left: 88.4%; width: 26%; ">
+        <img src="bad56.jpg" class="item bad" alt="Лишний предмет 56" style="top: 71.4%; left: 98.0%; width: 32%; ">
+        <img src="bad57.jpg" class="item bad" alt="Лишний предмет 57" style="top: 80.0%; left: 2.0%; width: 28%; ">
+        <img src="bad58.jpg" class="item bad" alt="Лишний предмет 58" style="top: 80.0%; left: 11.6%; width: 30%; ">
+        <img src="bad59.jpg" class="item bad" alt="Лишний предмет 59" style="top: 80.0%; left: 21.2%; width: 26%; ">
+        <img src="bad60.jpg" class="item bad" alt="Лишний предмет 60" style="top: 80.0%; left: 30.8%; width: 32%; ">
+
+        <img src="bad61.jpg" class="item bad" alt="Лишний предмет 61" style="top: 80.0%; left: 40.4%; width: 28%; ">
+        <img src="bad62.jpg" class="item bad" alt="Лишний предмет 62" style="top: 80.0%; left: 50.0%; width: 30%; ">
+        <img src="bad63.jpg" class="item bad" alt="Лишний предмет 63" style="top: 80.0%; left: 59.6%; width: 26%; ">
+        <img src="bad64.jpg" class="item bad" alt="Лишний предмет 64" style="top: 80.0%; left: 69.2%; width: 32%; ">
+        <img src="bad65.jpg" class="item bad" alt="Лишний предмет 65" style="top: 80.0%; left: 78.8%; width: 28%; ">
+        <img src="bad66.jpg" class="item bad" alt="Лишний предмет 66" style="top: 80.0%; left: 88.4%; width: 30%; ">
+        <img src="bad67.jpg" class="item bad" alt="Лишний предмет 67" style="top: 80.0%; left: 98.0%; width: 26%; ">
+        <img src="bad68.jpg" class="item bad" alt="Лишний предмет 68" style="top: 88.5%; left: 2.0%; width: 32%; ">
+        <img src="bad69.jpg" class="item bad" alt="Лишний предмет 69" style="top: 88.5%; left: 11.6%; width: 28%; ">
+        <img src="bad70.jpg" class="item bad" alt="Лишний предмет 70" style="top: 88.5%; left: 21.2%; width: 30%; ">
+
+        <img src="bad71.jpg" class="item bad" alt="Лишний предмет 71" style="top: 88.5%; left: 30.8%; width: 26%; ">
+        <img src="bad72.jpg" class="item bad" alt="Лишний предмет 72" style="top: 88.5%; left: 40.4%; width: 32%; ">
+        <img src="bad73.jpg" class="item bad" alt="Лишний предмет 73" style="top: 88.5%; left: 50.0%; width: 28%; ">
+        <img src="bad74.jpg" class="item bad" alt="Лишний предмет 74" style="top: 88.5%; left: 59.6%; width: 30%; ">
+        <img src="bad75.jpg" class="item bad" alt="Лишний предмет 75" style="top: 88.5%; left: 69.2%; width: 26%; ">
+        <img src="bad76.jpg" class="item bad" alt="Лишний предмет 76" style="top: 88.5%; left: 78.8%; width: 32%; ">
+        <img src="bad77.jpg" class="item bad" alt="Лишний предмет 77" style="top: 88.5%; left: 88.4%; width: 28%; ">
+        <img src="bad78.jpg" class="item bad" alt="Лишний предмет 78" style="top: 88.5%; left: 98.0%; width: 30%; ">
+        <img src="bad79.jpg" class="item bad" alt="Лишний предмет 79" style="top: 97.0%; left: 2.0%; width: 26%; ">
+        <img src="bad80.jpg" class="item bad" alt="Лишний предмет 80" style="top: 97.0%; left: 11.6%; width: 32%; ">
+
+        <img src="bad81.jpg" class="item bad" alt="Лишний предмет 81" style="top: 97.0%; left: 21.2%; width: 28%; ">
+        <img src="bad82.jpg" class="item bad" alt="Лишний предмет 82" style="top: 97.0%; left: 30.8%; width: 30%; ">
+        <img src="bad83.jpg" class="item bad" alt="Лишний предмет 83" style="top: 97.0%; left: 40.4%; width: 26%; ">
+
+      </div>
+
+      <!-- Финальный экран -->
+      <div class="final-overlay" id="finalOverlay">
+        <div class="final-title">Ура! 🎉</div>
+        <div class="final-text">
+          Ты нашла все нужные предметы. Теперь видно, что скрывалось на картинке.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Музыка (если не нужна — просто удали этот тег и логику в JS) -->
+<audio id="bgMusic" src="music.mp3" loop></audio>
+
+<script>
+  const gameRoot = document.getElementById('gameRoot');
+  const imageContainer = document.getElementById('imageContainer');
+  const statusText = document.getElementById('statusText');
+  const counterEl = document.getElementById('counter');
+  const finalOverlay = document.getElementById('finalOverlay');
+
+  const goodItems = Array.from(document.querySelectorAll('.item.good'));
+  const badItems = Array.from(document.querySelectorAll('.item.bad'));
+  const allItems = Array.from(document.querySelectorAll('.item'));
+
+  const totalGood = goodItems.length; // должно быть 40
+  let foundGood = 0;
+
+  // Музыка
+  const music = document.getElementById('bgMusic');
+  const musicToggle = document.getElementById('musicToggle');
+  let musicOn = false;
+
+  musicToggle.addEventListener('click', () => {
+    musicOn = !musicOn;
+    if (musicOn) {
+      music.play().catch(() => {});
+      musicToggle.textContent = 'Музыка вкл';
+    } else {
+      music.pause();
+      musicToggle.textContent = 'Музыка выкл';
     }
+  });
 
-    // перемешиваем все плитки
-    const tiles = Array.from(tilesGrid.children);
-    tiles.sort(() => Math.random() - 0.5);
-    tiles.forEach(t => tilesGrid.appendChild(t));
+  function updateCounter() {
+    counterEl.textContent = `Найдено ${foundGood} из ${totalGood}`;
+  }
 
-    let found = 0;
-    counter.textContent = `Найдено ${found} из ${GOOD_COUNT}`;
+  updateCounter();
 
-    tiles.forEach(tile => {
-      tile.addEventListener('click', () => {
-        if (tile.dataset.correct === "true") {
-          if (tile.classList.contains("tile-found")) return;
+  function completeGame() {
+    imageContainer.classList.add('items-hidden');
+    gameRoot.classList.add('game-complete');
+    finalOverlay.classList.add('visible');
+    statusText.textContent = 'Все нужные предметы найдены 🎉';
+  }
 
-          tile.classList.add("tile-found");
-          found++;
-          counter.textContent = `Найдено ${found} из ${GOOD_COUNT}`;
+  // клики по правильным
+  goodItems.forEach(item => {
+    item.addEventListener('click', () => {
+      if (item.classList.contains('found')) return;
+      item.classList.add('found');
+      foundGood++;
+      updateCounter();
 
-          if (found === GOOD_COUNT) {
-            tilesGrid.classList.add("hidden");
-            finalMsg.classList.add("show");
-          }
-        } else {
-          tile.classList.remove("tile-wrong");
-          void tile.offsetWidth;
-          tile.classList.add("tile-wrong");
-        }
-      });
+      if (foundGood >= totalGood) {
+        completeGame();
+      } else {
+        statusText.textContent = 'Отлично! Ищи дальше нужные предметы…';
+      }
     });
+  });
 
-    let musicOn = false;
-    musicToggle.addEventListener("click", async () => {
-      try {
-        if (!musicOn) {
-          await bgMusic.play();
-          musicOn = true;
-          musicToggle.textContent = "Выключить музыку 🔇";
-        } else {
-          bgMusic.pause();
-          musicOn = false;
-          musicToggle.textContent = "Включить музыку 🎵";
-        }
-      } catch {}
+  // клики по неправильным
+  badItems.forEach(item => {
+    item.addEventListener('click', () => {
+      item.classList.remove('wrong');
+      void item.offsetWidth; // перезапуск анимации
+      item.classList.add('wrong');
+      statusText.textContent = 'Это лишний предмет, ищи другие 😉';
     });
-  </script>
+  });
+</script>
+
 </body>
 </html>
