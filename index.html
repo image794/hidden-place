@@ -165,30 +165,28 @@
 
     .sparkle {
       position: absolute;
-      width: 9px;
-      height: 9px;
+      width: 10px;
+      height: 10px;
       border-radius: 999px;
       background: radial-gradient(circle, #ffffff, rgba(255, 255, 255, 0));
       opacity: 0;
-      animation: sparkle-pop 2s ease-out forwards;
+      animation: sparkle-pop 1.2s ease-out forwards;
     }
 
     @keyframes sparkle-pop {
-      0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.4);
-      }
-      15% {
-        opacity: 1;
-      }
-      60% {
-        opacity: 1;
-      }
-      100% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(1.8);
-      }
-    }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4) rotate(45deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(45deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.4) rotate(45deg);
+  }
+}
   </style>
 </head>
 <body>
@@ -251,11 +249,11 @@
     const TOTAL_ITEMS = GOOD_COUNT + BAD_COUNT;
 
     // размеры (в процентах от ширины рамки):
-    const BASE_WIDTH_PERCENT = 20;  // базовый размер карточки
+    const BASE_WIDTH_PERCENT = 16;  // базовый размер карточки
     const SIZE_VARIATION = 0.2;     // ±20% по размеру
-    const ROTATED_COUNT = 32;       // сколько картинок чуть повернуть
+    const ROTATED_COUNT = 33;       // сколько картинок чуть повернуть
     const COLS = 10;                 // "сетка" для равномерного распределения
-    const ROWS = 14;                // вместе даёт 88+ ячеек; плюс джиттер
+    const ROWS = 12;                // вместе даёт 88+ ячеек; плюс джиттер
     const JITTER = 1;               // разброс от центра ячейки (в процентах)
 
     const page          = document.getElementById('page');
@@ -394,7 +392,7 @@
 
     // === СОЗДАЁМ КАРТИНКИ В DOM ===
     itemsData.forEach((item, index) => {
-      const cell = gridPositions[index % gridPositions.length];
+      const cell = gridPositions[index];
 
       const wrapper = document.createElement('div');
       wrapper.className = `item ${item.type}`;
