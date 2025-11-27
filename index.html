@@ -186,6 +186,15 @@
     opacity: 0;
     transform: translate(-50%, -50%) scale(1.4) rotate(45deg);
   }
+
+      /* Эффект подсветки при подсказке */
+.item.hint-highlight {
+  box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.9),
+              0 0 20px rgba(255, 215, 0, 0.6);
+  transform: translate(-50%, -50%) scale(1.15) rotate(var(--initial-rotation, 0deg));
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  z-index: 9999;
+}
 }
   </style>
 </head>
@@ -196,6 +205,7 @@
         <div class="game-title">Найди все что скрыто 🔍</div>
         <button class="pill pill-btn" id="musicToggle">Поднять настроение 🎵</button>
       </div>
+      <button class="pill pill-btn" id="hintBtn"><Боже,поможите (3 раза)</button>
       <div class="top-row">
         <div class="game-subtitle">
           Нажимай на свои фото, чтобы они исчезали.
@@ -256,7 +266,7 @@
     const ROTATED_COUNT = 33;       // сколько картинок чуть повернуть
     const COLS = 9;                 // "сетка" для равномерного распределения
     const ROWS = 12;                // вместе даёт 88+ ячеек; плюс джиттер
-    const JITTER = 2;               // разброс от центра ячейки (в процентах)
+    const JITTER = 1;               // разброс от центра ячейки (в процентах)
 
     const page          = document.getElementById('page');
     const itemsLayer    = document.getElementById('itemsLayer');
@@ -266,6 +276,37 @@
     const sparklesLayer = document.getElementById('sparklesLayer');
 
     let foundGood = 0;
+
+    // === ПОДСКАЗКИ ===
+let hintsLeft = 3;
+const hintBtn = document.getElementById('hintBtn');
+
+hintBtn.addEventListener('click', () => {
+  if (hintsLeft <= 0) {
+    hintBtn.textContent = 'Подсказок нет';
+    return;
+  }
+
+  // берём все правильные, но ещё не найденные фото
+  const remainingGoodItems = Array.from(document.querySelectorAll('.item.good:not(.found)'));
+
+  if (remainingGoodItems.length === 0) return;
+
+  // рандомно выбираем одно
+  const randomItem = remainingGoodItems[Math.floor(Math.random() * remainingGoodItems.length)];
+
+  // включаем подсветку
+  randomItem.classList.add('hint');
+
+  // убираем через 2 секунды
+  setTimeout(() => {
+    randomItem.classList.remove('hint');
+  }, 2000);
+
+  // уменьшаем количество подсказок
+  hintsLeft--;
+  hintBtn.textContent = `Подсказка (${hintsLeft})`;
+});
 
     // === СПИСОК КАРТОЧЕК ===
     const itemsData = [];
