@@ -249,12 +249,12 @@
     const TOTAL_ITEMS = GOOD_COUNT + BAD_COUNT;
 
     // размеры (в процентах от ширины рамки):
-    const BASE_WIDTH_PERCENT = 16;  // базовый размер карточки
+    const BASE_WIDTH_PERCENT = 20;  // базовый размер карточки
     const SIZE_VARIATION = 0.2;     // ±20% по размеру
     const ROTATED_COUNT = 33;       // сколько картинок чуть повернуть
-    const COLS = 10;                 // "сетка" для равномерного распределения
+    const COLS = 9;                 // "сетка" для равномерного распределения
     const ROWS = 12;                // вместе даёт 88+ ячеек; плюс джиттер
-    const JITTER = 1;               // разброс от центра ячейки (в процентах)
+    const JITTER = 2;               // разброс от центра ячейки (в процентах)
 
     const page          = document.getElementById('page');
     const itemsLayer    = document.getElementById('itemsLayer');
