@@ -187,15 +187,26 @@
     transform: translate(-50%, -50%) scale(1.4) rotate(45deg);
   }
 
-      /* Эффект подсветки при подсказке */
-.item.hint-highlight {
-  box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.9),
-              0 0 20px rgba(255, 215, 0, 0.6);
-  transform: translate(-50%, -50%) scale(1.15) rotate(var(--initial-rotation, 0deg));
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  z-index: 9999;
-}
-}
+  /* Подсветка подсказки */
+  .hint-highlight {
+    animation: hintGlow 1.2s ease-out, shake 0.4s ease-in-out;
+    z-index: 999 !important;
+  }
+
+  @keyframes hintGlow {
+    0%   { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0px 0 rgba(255, 255, 0, 0.8); }
+    50%  { transform: translate(-50%, -50%) scale(1.18); box-shadow: 0 0 22px 12px rgba(255, 255, 0, 0.9); }
+    100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0px 0 rgba(255, 255, 0, 0); }
+  }
+
+  @keyframes shake {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    25% { transform: translate(-50%, -48%) rotate(-3deg); }
+    50% { transform: translate(-50%, -50%) rotate(3deg); }
+    75% { transform: translate(-50%, -52%) rotate(-3deg); }
+    100% { transform: translate(-50%, -50%) rotate(0deg); }
+  }
+  
   </style>
 </head>
 <body>
@@ -205,7 +216,7 @@
         <div class="game-title">Найди все что скрыто 🔍</div>
         <button class="pill pill-btn" id="musicToggle">Поднять настроение 🎵</button>
       </div>
-      <button class="pill pill-btn" id="hintBtn"><Боже,поможите (3 раза)</button>
+      <button class="pill pill-btn" id="hintBtn"> Помощь глазам (осталось 3 раза)</button>
       <div class="top-row">
         <div class="game-subtitle">
           Нажимай на свои фото, чтобы они исчезали.
@@ -262,7 +273,7 @@
 
     // размеры (в процентах от ширины рамки):
     const BASE_WIDTH_PERCENT = 20;  // базовый размер карточки
-    const SIZE_VARIATION = 0.2;     // ±20% по размеру
+    const SIZE_VARIATION = 0.1;     // ±20% по размеру
     const ROTATED_COUNT = 33;       // сколько картинок чуть повернуть
     const COLS = 9;                 // "сетка" для равномерного распределения
     const ROWS = 12;                // вместе даёт 88+ ячеек; плюс джиттер
@@ -278,35 +289,33 @@
     let foundGood = 0;
 
     // === ПОДСКАЗКИ ===
-let hintsLeft = 3;
-const hintBtn = document.getElementById('hintBtn');
+	let hintsLeft = 3;
+	const hintBtn = document.getElementById('hintBtn');
 
-hintBtn.addEventListener('click', () => {
-  if (hintsLeft <= 0) {
-    hintBtn.textContent = 'Подсказок нет';
-    return;
-  }
+	hintBtn.addEventListener('click', () => {
+	  if (hintsLeft <= 0) {
+	    statusTextEl.textContent = "Штош, теперь надежда только на внимательность✋";
+	    return;
+	  }
 
-  // берём все правильные, но ещё не найденные фото
-  const remainingGoodItems = Array.from(document.querySelectorAll('.item.good:not(.found)'));
+	  // Ищем не найденные правильные элементы
+	  const candidates = Array.from(document.querySelectorAll('.item.good:not(.found)'));
 
-  if (remainingGoodItems.length === 0) return;
+	  if (candidates.length === 0) return;
 
-  // рандомно выбираем одно
-  const randomItem = remainingGoodItems[Math.floor(Math.random() * remainingGoodItems.length)];
+	  hintsLeft--;
+	  hintBtn.textContent = `Помощь глазам ✨ (${hintsLeft})`;
 
-  // включаем подсветку
-  randomItem.classList.add('hint');
+	  const target = candidates[Math.floor(Math.random() * candidates.length)];
 
-  // убираем через 2 секунды
-  setTimeout(() => {
-    randomItem.classList.remove('hint');
-  }, 2000);
+	  // добавляем подсветку
+	  target.classList.add('hint-highlight');
 
-  // уменьшаем количество подсказок
-  hintsLeft--;
-  hintBtn.textContent = `Подсказка (${hintsLeft})`;
-});
+	  // убираем через 1.2 сек
+	  setTimeout(() => {
+	    target.classList.remove('hint-highlight');
+	  }, 1200);
+	});
 
     // === СПИСОК КАРТОЧЕК ===
     const itemsData = [];
