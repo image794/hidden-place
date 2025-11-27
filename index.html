@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Найди все сделанные тобой фото 📸</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #05060a;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #f5f5f5;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      padding: max(10px, env(safe-area-inset-top, 0px)) 10px 16px;
+    }
+
+    .page {
+      width: min(430px, 100vw);
+    }
+
+    .top-ui {
+      margin-bottom: 8px;
+      padding: 8px 10px 8px;
+      border-radius: 18px;
+      background: radial-gradient(circle at 0 0, #343b66, #181927);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .game-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .game-subtitle {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+    }
+
+    .pill-btn {
+      cursor: pointer;
+      outline: none;
+    }
+
+    .pill-btn:active {
+      transform: scale(0.97);
+    }
+
+    .counter-pill {
+      font-weight: 600;
+    }
+
+    /* Рамка с фоном и предметами под размер экрана телефона */
+    .image-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 14; /* чуть ниже, чем 9/16, чтобы не скроллить по высоте */
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.75);
+      background: #000;
+    }
+
+    /* Фон: твоя основная картинка */
+    .base-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.96);
+      transition: filter 0.25s ease;
+    }
+
+    /* Слой с предметами */
+    .items-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none; /* клики только по картинкам, не по слою */
+    }
+
+    .item {
+      position: absolute;
+      pointer-events: auto;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-drag: none;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 10px 25px rgba(0, 0, 0, 0.65);
+      transform: translate(-50%, -50%) rotate(var(--initial-rotation, 0deg));
+      transition:
+        transform 0.18s ease,
+        opacity 0.3s ease,
+        box-shadow 0.18s ease;
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .item-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .item:hover {
+      box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.45),
+        0 12px 30px rgba(0, 0, 0, 0.9);
+      transform: translate(-50%, -50%) scale(1.03) rotate(var(--initial-rotation, 0deg));
+    }
+
+    .item.found {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.7) rotate(var(--initial-rotation, 0deg));
+      box-shadow: none;
+      pointer-events: none;
+    }
+
+    .page.game-complete .base-image {
+      filter: brightness(1.05);
+    }
+
+    .status-text {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    /* Слой блёсток */
+    .sparkles-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .sparkle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff, rgba(255, 255, 255, 0));
+      opacity: 0;
+      animation: sparkle-pop 0.9s ease-out forwards;
+    }
+
+    @keyframes sparkle-pop {
+      0% {
+        transform: translate(-50%, -50%) scale(0.2);
+        opacity: 0;
+      }
+      20% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -120%) scale(1.3);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page" id="page">
+    <header class="top-ui">
+      <div class="top-row">
+        <div class="game-title">Найди всё, что скрыто 🔍</div>
+        <button class="pill pill-btn" id="musicToggle">Поднять настроение 🎵</button>
+      </div>
+      <div class="top-row">
+        <div class="game-subtitle">
+          Нажимай на свои фото, чтобы они исчезали.
+        </div>
+        <div class="pill counter-pill" id="counter">Найдено 0 из 36</div>
+      </div>
+      <div class="status-text" id="statusText">
+        Найди 36 правильных фото. Остальное — просто посмотреть 🙂
+      </div>
+    </header>
+
+    <div class="image-frame">
+      <!-- твой фон: просто замени bg1.jpg на свой файл -->
+      <img src="bg1.jpg" alt="Фон" class="base-image" />
+
+      <!-- сюда JS добавит все предметы -->
+      <div class="items-layer" id="itemsLayer"></div>
+      <!-- слой блёсток -->
+      <div class="sparkles-layer" id="sparklesLayer"></div>
+    </div>
+  </div>
+
+  <script>
+    // === НАСТРОЙКИ ФАЙЛОВ ===
+    const goodFiles = [
+      // 36 правильных картинок
+      'good1.jpg',  'good2.jpg',  'good3.jpg',  'good4.jpg',
+      'good5.jpg',  'good6.jpg',  'good7.jpg',  'good8.jpg',
+      'good9.jpg',  'good10.jpg', 'good11.jpg', 'good12.jpg',
+      'good13.jpg', 'good14.jpg', 'good15.jpg', 'good16.jpg',
+      'good17.jpg', 'good18.jpg', 'good19.jpg', 'good20.jpg',
+      'good21.jpg', 'good22.jpg', 'good23.jpg', 'good24.jpg',
+      'good25.jpg', 'good26.jpg', 'good27.jpg', 'good28.jpg',
+      'good29.jpg', 'good30.jpg', 'good31.jpg', 'good32.jpg',
+      'good33.jpg', 'good34.jpg', 'good35.jpg', 'good36.jpg',
+    ];
+
+    const badFiles = [
+      // 60 неправильных картинок
+      'bad1.jpg',  'bad2.jpg',  'bad3.jpg',  'bad4.jpg',
+      'bad5.jpg',  'bad6.jpg',  'bad7.jpg',  'bad8.jpg',
+      'bad9.jpg',  'bad10.jpg', 'bad11.jpg', 'bad12.jpg',
+      'bad13.jpg', 'bad14.jpg', 'bad15.jpg', 'bad16.jpg',
+      'bad17.jpg', 'bad18.jpg', 'bad19.jpg', 'bad20.jpg',
+      'bad21.jpg', 'bad22.jpg', 'bad23.jpg', 'bad24.jpg',
+      'bad25.jpg', 'bad26.jpg', 'bad27.jpg', 'bad28.jpg',
+      'bad29.jpg', 'bad30.jpg', 'bad31.jpg', 'bad32.jpg',
+      'bad33.jpg', 'bad34.jpg', 'bad35.jpg', 'bad36.jpg',
+      'bad37.jpg', 'bad38.jpg', 'bad39.jpg', 'bad40.jpg',
+      'bad41.jpg', 'bad42.jpg', 'bad43.jpg', 'bad44.jpg',
+      'bad45.jpg', 'bad46.jpg', 'bad47.jpg', 'bad48.jpg',
+      'bad49.jpg', 'bad50.jpg', 'bad51.jpg', 'bad52.jpg',
+      'bad53.jpg', 'bad54.jpg', 'bad55.jpg', 'bad56.jpg',
+      'bad57.jpg', 'bad58.jpg', 'bad59.jpg', 'bad60.jpg',
+    ];
+
+    const GOOD_COUNT = goodFiles.length;
+    const BAD_COUNT  = badFiles.length;
+
+    // === РАЗМЕТКА / РАСПОЛОЖЕНИЕ ===
+    // размеры (в процентах от ширины рамки):
+    const BASE_WIDTH_PERCENT = 18;   // базовая ширина (чуть меньше, чем 20, чтобы меньше наложения)
+    const SIZE_VARIATION     = 0.2;  // ±20%
+    const ROTATED_COUNT      = 33;   // сколько картинок чуть повернуть
+    const COLS               = 10;   // сетка шире -> меньше наложение
+    const ROWS               = 11;   // 10×11 = 110 ячеек > 96 картинок
+    const JITTER             = 0.5;  // насколько можно "гулять" от центра ячейки
+
+    const page         = document.getElementById('page');
+    const itemsLayer   = document.getElementById('itemsLayer');
+    const sparklesLayer = document.getElementById('sparklesLayer');
+    const counterEl    = document.getElementById('counter');
+    const statusTextEl = document.getElementById('statusText');
+    const musicToggle  = document.getElementById('musicToggle');
+
+    let foundGood = 0;
+
+    // === МУЗЫКА ФОН ===
+    let audio;
+    let musicOn = false;
+    try {
+      audio = new Audio('music.mp3'); // твой основной трек
+      audio.loop = true;
+    } catch (e) {
+      audio = null;
+    }
+
+    musicToggle.addEventListener('click', () => {
+      if (!audio) return;
+      musicOn = !musicOn;
+      if (musicOn) {
+        audio.play().catch(() => {});
+        musicToggle.textContent = 'Настроение вкл 🎶';
+      } else {
+        audio.pause();
+        musicToggle.textContent = 'Настроение выкл 🎵';
+      }
+    });
+
+    // === ПОБЕДНЫЙ ЗВУК ===
+    let winSound;
+    try {
+      winSound = new Audio('win.mp3'); // твой "вау"-звук
+    } catch (e) {
+      winSound = null;
+    }
+
+    // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+    function updateCounter() {
+      counterEl.textContent = `Найдено ${foundGood} из ${GOOD_COUNT}`;
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function makeGridPositions(cols, rows) {
+      const cells = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = ((c + 0.5) / cols) * 100;
+          const y = ((r + 0.5) / rows) * 100;
+          cells.push({ x, y });
+        }
+      }
+      return shuffle(cells);
+    }
+
+    function runSparklesExplosion() {
+      if (!sparklesLayer) return;
+
+      sparklesLayer.innerHTML = '';
+
+      const count = 80; // сколько блёсток
+      for (let i = 0; i < count; i++) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+
+        s.style.left = Math.random() * 100 + '%';
+        s.style.top  = (20 + Math.random() * 60) + '%';
+
+        const delay = Math.random() * 0.3;
+        const scale = 0.4 + Math.random() * 0.5;
+        s.style.animationDelay = `${delay}s`;
+        s.style.transform = `translate(-50%, -50%) scale(${scale})`;
+
+        sparklesLayer.appendChild(s);
+      }
+
+      setTimeout(() => {
+        if (sparklesLayer) {
+          sparklesLayer.innerHTML = '';
+        }
+      }, 1300);
+    }
+
+    // === СОБИРАЕМ СПИСОК КАРТИНОК ===
+    const itemsData = [];
+
+    goodFiles.forEach((name, index) => {
+      itemsData.push({
+        src: name,
+        type: 'good',
+        label: `Правильное фото ${index + 1}`,
+      });
+    });
+
+    badFiles.forEach((name, index) => {
+      itemsData.push({
+        src: name,
+        type: 'bad',
+        label: `Не твоё фото ${index + 1}`,
+      });
+    });
+
+    // перемешиваем, чтобы правильные и неправильные не шли подряд
+    shuffle(itemsData);
+
+    // выбираем случайные индексы, которые будут чуть повернуты
+    const rotatedIndexes = new Set();
+    while (rotatedIndexes.size < Math.min(ROTATED_COUNT, itemsData.length)) {
+      rotatedIndexes.add(Math.floor(Math.random() * itemsData.length));
+    }
+
+    const gridPositions = makeGridPositions(COLS, ROWS);
+
+    // === СОЗДАЁМ КАРТИНКИ В DOM ===
+    itemsData.forEach((item, index) => {
+      const cell = gridPositions[index % gridPositions.length];
+
+      const wrapper = document.createElement('div');
+      wrapper.className = `item ${item.type}`;
+      wrapper.dataset.type = item.type;
+
+      const delta = (Math.random() * 2 - 1) * SIZE_VARIATION; // от -0.2 до +0.2
+      const width = BASE_WIDTH_PERCENT * (1 + delta);
+
+      const offsetX = (Math.random() * 2 - 1) * JITTER;
+      const offsetY = (Math.random() * 2 - 1) * JITTER;
+
+      const x = cell.x + offsetX;
+      const y = cell.y + offsetY;
+
+      wrapper.style.width = `${width}%`;
+      wrapper.style.left  = `${x}%`;
+      wrapper.style.top   = `${y}%`;
+
+      let rotation = 0;
+      if (rotatedIndexes.has(index)) {
+        rotation = (Math.random() * 30 - 15).toFixed(1); // от -15° до +15°
+      }
+      wrapper.style.setProperty('--initial-rotation', `${rotation}deg`);
+
+      const img = document.createElement('img');
+      img.src = item.src;
+      img.alt = item.label;
+      img.className = 'item-img';
+
+      wrapper.appendChild(img);
+      itemsLayer.appendChild(wrapper);
+    });
+
+    // === ЛОГИКА КЛИКОВ ===
+    updateCounter();
+
+    itemsLayer.addEventListener('click', (event) => {
+      const target = event.target.closest('.item');
+      if (!target) return;
+
+      const imgEl = target.querySelector('img');
+
+      // Секретное сообщение для конкретного файла
+      if (imgEl && imgEl.src.includes('bad15.jpg')) {
+        alert('Ого! Ты нашла секретное фото! 😍 Но нет... оно не твоё, попробуй ещё.');
+      }
+
+      const type = target.dataset.type;
+
+      if (type === 'good') {
+        if (target.classList.contains('found')) return;
+
+        target.classList.add('found');
+        foundGood++;
+        updateCounter();
+
+        if (foundGood >= GOOD_COUNT) {
+          statusTextEl.textContent = 'Браво! Ты нашла все свои фото ✨ Теперь смотри на знаки Вселенной!';
+          page.classList.add('game-complete');
+
+          // скрываем все остальные
+          document.querySelectorAll('.item').forEach((it) => {
+            if (!it.classList.contains('found')) {
+              it.classList.add('found');
+            }
+          });
+
+          runSparklesExplosion();
+
+          // стоп основной музыки
+          if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+          }
+
+          // победный звук
+          if (winSound) {
+            winSound.play().catch(() => {});
+          }
+        } else {
+          statusTextEl.textContent = 'Ууффф! Продолжай искать свои фото…';
+        }
+      } else {
+        // неправильное фото — не убираем, только текст
+        statusTextEl.textContent = 'Это не то фото 😏 Ищи другие.';
+      }
+    });
+  </script>
+</body>
+</html>
