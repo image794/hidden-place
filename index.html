@@ -83,7 +83,7 @@
     .image-frame {
       position: relative;
       width: 100%;
-      aspect-ratio: 9 / 14; /* чуть ниже, чем 9/16, чтобы не скроллить по высоте */
+      aspect-ratio: 9 / 14; /* чуть ниже, чем 9/16 — меньше высота, чтобы не скроллить */
       border-radius: 24px;
       overflow: hidden;
       box-shadow: 0 18px 45px rgba(0, 0, 0, 0.75);
@@ -116,9 +116,8 @@
       -webkit-user-drag: none;
       border-radius: 16px;
       overflow: hidden;
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.1),
-        0 10px 25px rgba(0, 0, 0, 0.65);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1),
+                  0 10px 25px rgba(0, 0, 0, 0.65);
       transform: translate(-50%, -50%) rotate(var(--initial-rotation, 0deg));
       transition:
         transform 0.18s ease,
@@ -135,9 +134,8 @@
     }
 
     .item:hover {
-      box-shadow:
-        0 0 0 2px rgba(255, 255, 255, 0.45),
-        0 12px 30px rgba(0, 0, 0, 0.9);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45),
+                  0 12px 30px rgba(0, 0, 0, 0.9);
       transform: translate(-50%, -50%) scale(1.03) rotate(var(--initial-rotation, 0deg));
     }
 
@@ -157,7 +155,7 @@
       opacity: 0.9;
     }
 
-    /* Слой блёсток */
+    /* Слой для блёсток */
     .sparkles-layer {
       position: absolute;
       inset: 0;
@@ -167,25 +165,28 @@
 
     .sparkle {
       position: absolute;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
       background: radial-gradient(circle, #ffffff, rgba(255, 255, 255, 0));
       opacity: 0;
-      animation: sparkle-pop 0.9s ease-out forwards;
+      animation: sparkle-pop 2s ease-out forwards;
     }
 
     @keyframes sparkle-pop {
       0% {
-        transform: translate(-50%, -50%) scale(0.2);
         opacity: 0;
+        transform: translate(-50%, -50%) scale(0.4);
       }
-      20% {
+      15% {
+        opacity: 1;
+      }
+      60% {
         opacity: 1;
       }
       100% {
-        transform: translate(-50%, -120%) scale(1.3);
         opacity: 0;
+        transform: translate(-50%, -50%) scale(1.8);
       }
     }
   </style>
@@ -194,7 +195,7 @@
   <div class="page" id="page">
     <header class="top-ui">
       <div class="top-row">
-        <div class="game-title">Найди всё, что скрыто 🔍</div>
+        <div class="game-title">Найди все что скрыто 🔍</div>
         <button class="pill pill-btn" id="musicToggle">Поднять настроение 🎵</button>
       </div>
       <div class="top-row">
@@ -212,69 +213,84 @@
       <!-- твой фон: просто замени bg1.jpg на свой файл -->
       <img src="bg1.jpg" alt="Фон" class="base-image" />
 
-      <!-- сюда JS добавит все предметы -->
+      <!-- слой с фотками -->
       <div class="items-layer" id="itemsLayer"></div>
-      <!-- слой блёсток -->
+
+      <!-- слой для блёсток -->
       <div class="sparkles-layer" id="sparklesLayer"></div>
     </div>
   </div>
 
   <script>
-    // === НАСТРОЙКИ ФАЙЛОВ ===
+    // === НАСТРОЙКИ ===
     const goodFiles = [
       // 36 правильных картинок
-      'good1.jpg',  'good2.jpg',  'good3.jpg',  'good4.jpg',
-      'good5.jpg',  'good6.jpg',  'good7.jpg',  'good8.jpg',
-      'good9.jpg',  'good10.jpg', 'good11.jpg', 'good12.jpg',
-      'good13.jpg', 'good14.jpg', 'good15.jpg', 'good16.jpg',
-      'good17.jpg', 'good18.jpg', 'good19.jpg', 'good20.jpg',
-      'good21.jpg', 'good22.jpg', 'good23.jpg', 'good24.jpg',
-      'good25.jpg', 'good26.jpg', 'good27.jpg', 'good28.jpg',
-      'good29.jpg', 'good30.jpg', 'good31.jpg', 'good32.jpg',
-      'good33.jpg', 'good34.jpg', 'good35.jpg', 'good36.jpg',
+      'good1.jpg','good2.jpg','good3.jpg','good4.jpg','good5.jpg','good6.jpg',
+      'good7.jpg','good8.jpg','good9.jpg','good10.jpg','good11.jpg','good12.jpg',
+      'good13.jpg','good14.jpg','good15.jpg','good16.jpg','good17.jpg','good18.jpg',
+      'good19.jpg','good20.jpg','good21.jpg','good22.jpg','good23.jpg','good24.jpg',
+      'good25.jpg','good26.jpg','good27.jpg','good28.jpg','good29.jpg','good30.jpg',
+      'good31.jpg','good32.jpg','good33.jpg','good34.jpg','good35.jpg','good36.jpg',
     ];
 
     const badFiles = [
       // 60 неправильных картинок
-      'bad1.jpg',  'bad2.jpg',  'bad3.jpg',  'bad4.jpg',
-      'bad5.jpg',  'bad6.jpg',  'bad7.jpg',  'bad8.jpg',
-      'bad9.jpg',  'bad10.jpg', 'bad11.jpg', 'bad12.jpg',
-      'bad13.jpg', 'bad14.jpg', 'bad15.jpg', 'bad16.jpg',
-      'bad17.jpg', 'bad18.jpg', 'bad19.jpg', 'bad20.jpg',
-      'bad21.jpg', 'bad22.jpg', 'bad23.jpg', 'bad24.jpg',
-      'bad25.jpg', 'bad26.jpg', 'bad27.jpg', 'bad28.jpg',
-      'bad29.jpg', 'bad30.jpg', 'bad31.jpg', 'bad32.jpg',
-      'bad33.jpg', 'bad34.jpg', 'bad35.jpg', 'bad36.jpg',
-      'bad37.jpg', 'bad38.jpg', 'bad39.jpg', 'bad40.jpg',
-      'bad41.jpg', 'bad42.jpg', 'bad43.jpg', 'bad44.jpg',
-      'bad45.jpg', 'bad46.jpg', 'bad47.jpg', 'bad48.jpg',
-      'bad49.jpg', 'bad50.jpg', 'bad51.jpg', 'bad52.jpg',
-      'bad53.jpg', 'bad54.jpg', 'bad55.jpg', 'bad56.jpg',
-      'bad57.jpg', 'bad58.jpg', 'bad59.jpg', 'bad60.jpg',
+      'bad1.jpg','bad2.jpg','bad3.jpg','bad4.jpg','bad5.jpg','bad6.jpg',
+      'bad7.jpg','bad8.jpg','bad9.jpg','bad10.jpg','bad11.jpg','bad12.jpg',
+      'bad13.jpg','bad14.jpg','bad15.jpg','bad16.jpg','bad17.jpg','bad18.jpg',
+      'bad19.jpg','bad20.jpg','bad21.jpg','bad22.jpg','bad23.jpg','bad24.jpg',
+      'bad25.jpg','bad26.jpg','bad27.jpg','bad28.jpg','bad29.jpg','bad30.jpg',
+      'bad31.jpg','bad32.jpg','bad33.jpg','bad34.jpg','bad35.jpg','bad36.jpg',
+      'bad37.jpg','bad38.jpg','bad39.jpg','bad40.jpg','bad41.jpg','bad42.jpg',
+      'bad43.jpg','bad44.jpg','bad45.jpg','bad46.jpg','bad47.jpg','bad48.jpg',
+      'bad49.jpg','bad50.jpg','bad51.jpg','bad52.jpg','bad53.jpg','bad54.jpg',
+      'bad55.jpg','bad56.jpg','bad57.jpg','bad58.jpg','bad59.jpg','bad60.jpg',
     ];
 
     const GOOD_COUNT = goodFiles.length;
     const BAD_COUNT  = badFiles.length;
+    const TOTAL_ITEMS = GOOD_COUNT + BAD_COUNT;
 
-    // === РАЗМЕТКА / РАСПОЛОЖЕНИЕ ===
     // размеры (в процентах от ширины рамки):
-    const BASE_WIDTH_PERCENT = 18;   // базовая ширина (чуть меньше, чем 20, чтобы меньше наложения)
-    const SIZE_VARIATION     = 0.2;  // ±20%
-    const ROTATED_COUNT      = 33;   // сколько картинок чуть повернуть
-    const COLS               = 10;   // сетка шире -> меньше наложение
-    const ROWS               = 11;   // 10×11 = 110 ячеек > 96 картинок
-    const JITTER             = 0.5;  // насколько можно "гулять" от центра ячейки
+    const BASE_WIDTH_PERCENT = 20;  // базовый размер карточки
+    const SIZE_VARIATION = 0.2;     // ±20% по размеру
+    const ROTATED_COUNT = 33;       // сколько картинок чуть повернуть
+    const COLS = 8;                 // "сетка" для равномерного распределения
+    const ROWS = 11;                // вместе даёт 88+ ячеек; плюс джиттер
+    const JITTER = 1;               // разброс от центра ячейки (в процентах)
 
-    const page         = document.getElementById('page');
-    const itemsLayer   = document.getElementById('itemsLayer');
+    const page          = document.getElementById('page');
+    const itemsLayer    = document.getElementById('itemsLayer');
+    const counterEl     = document.getElementById('counter');
+    const statusTextEl  = document.getElementById('statusText');
+    const musicToggle   = document.getElementById('musicToggle');
     const sparklesLayer = document.getElementById('sparklesLayer');
-    const counterEl    = document.getElementById('counter');
-    const statusTextEl = document.getElementById('statusText');
-    const musicToggle  = document.getElementById('musicToggle');
 
     let foundGood = 0;
 
-    // === МУЗЫКА ФОН ===
+    // === СПИСОК КАРТОЧЕК ===
+    const itemsData = [];
+
+    goodFiles.forEach((name, index) => {
+      itemsData.push({
+        src: name,
+        type: 'good',
+        label: `Правильное фото ${index + 1}`,
+      });
+    });
+
+    badFiles.forEach((name, index) => {
+      itemsData.push({
+        src: name,
+        type: 'bad',
+        label: `Защищено авторским правом, не твоё ${index + 1}`,
+      });
+    });
+
+    // перемешиваем, чтобы правильные и неправильные не шли подряд
+    shuffle(itemsData);
+
+    // === МУЗЫКА (фон) ===
     let audio;
     let musicOn = false;
     try {
@@ -299,14 +315,53 @@
     // === ПОБЕДНЫЙ ЗВУК ===
     let winSound;
     try {
-      winSound = new Audio('win.mp3'); // твой "вау"-звук
+      winSound = new Audio('win.mp3');   // ← твой "ваааау"-звук
+      winSound.addEventListener('ended', () => {
+        // когда победный звук закончился — продолжаем основную музыку, если она была включена
+        if (musicOn && audio) {
+          audio.play().catch(() => {});
+        }
+      });
     } catch (e) {
       winSound = null;
     }
 
     // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+
     function updateCounter() {
       counterEl.textContent = `Найдено ${foundGood} из ${GOOD_COUNT}`;
+    }
+
+    function runSparklesExplosion() {
+      if (!sparklesLayer) return;
+
+      // очищаем старые блёстки
+      sparklesLayer.innerHTML = '';
+
+      const count = 160; // БОЛЬШЕ блёсток
+      for (let i = 0; i < count; i++) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+
+        // случайная позиция по ширине/высоте
+        s.style.left = (5 + Math.random() * 90) + '%';
+        s.style.top  = (15 + Math.random() * 70) + '%';
+
+        // небольшое случайное изменение размера и задержки
+        const delay = Math.random() * 0.6;
+        const scale = 0.6 + Math.random() * 0.9;
+        s.style.animationDelay = `${delay}s`;
+        s.style.transform = `translate(-50%, -50%) scale(${scale})`;
+
+        sparklesLayer.appendChild(s);
+      }
+
+      //убираем блёстки ЧУТЬ ПОЗЖЕ, чем длится анимация
+      setTimeout(() => {
+        if (sparklesLayer) {
+          sparklesLayer.innerHTML = '';
+        }
+      }, 2300);
     }
 
     function shuffle(array) {
@@ -317,6 +372,7 @@
       return array;
     }
 
+    // генерируем список всех позиций ячеек
     function makeGridPositions(cols, rows) {
       const cells = [];
       for (let r = 0; r < rows; r++) {
@@ -329,59 +385,9 @@
       return shuffle(cells);
     }
 
-    function runSparklesExplosion() {
-      if (!sparklesLayer) return;
-
-      sparklesLayer.innerHTML = '';
-
-      const count = 80; // сколько блёсток
-      for (let i = 0; i < count; i++) {
-        const s = document.createElement('div');
-        s.className = 'sparkle';
-
-        s.style.left = Math.random() * 100 + '%';
-        s.style.top  = (20 + Math.random() * 60) + '%';
-
-        const delay = Math.random() * 0.3;
-        const scale = 0.4 + Math.random() * 0.5;
-        s.style.animationDelay = `${delay}s`;
-        s.style.transform = `translate(-50%, -50%) scale(${scale})`;
-
-        sparklesLayer.appendChild(s);
-      }
-
-      setTimeout(() => {
-        if (sparklesLayer) {
-          sparklesLayer.innerHTML = '';
-        }
-      }, 1300);
-    }
-
-    // === СОБИРАЕМ СПИСОК КАРТИНОК ===
-    const itemsData = [];
-
-    goodFiles.forEach((name, index) => {
-      itemsData.push({
-        src: name,
-        type: 'good',
-        label: `Правильное фото ${index + 1}`,
-      });
-    });
-
-    badFiles.forEach((name, index) => {
-      itemsData.push({
-        src: name,
-        type: 'bad',
-        label: `Не твоё фото ${index + 1}`,
-      });
-    });
-
-    // перемешиваем, чтобы правильные и неправильные не шли подряд
-    shuffle(itemsData);
-
     // выбираем случайные индексы, которые будут чуть повернуты
     const rotatedIndexes = new Set();
-    while (rotatedIndexes.size < Math.min(ROTATED_COUNT, itemsData.length)) {
+    while (rotatedIndexes.size < Math.min(33, itemsData.length)) {
       rotatedIndexes.add(Math.floor(Math.random() * itemsData.length));
     }
 
@@ -395,9 +401,11 @@
       wrapper.className = `item ${item.type}`;
       wrapper.dataset.type = item.type;
 
+      // случайный размер ±20%
       const delta = (Math.random() * 2 - 1) * SIZE_VARIATION; // от -0.2 до +0.2
       const width = BASE_WIDTH_PERCENT * (1 + delta);
 
+      // небольшое смещение от центра ячейки
       const offsetX = (Math.random() * 2 - 1) * JITTER;
       const offsetY = (Math.random() * 2 - 1) * JITTER;
 
@@ -405,9 +413,10 @@
       const y = cell.y + offsetY;
 
       wrapper.style.width = `${width}%`;
-      wrapper.style.left  = `${x}%`;
-      wrapper.style.top   = `${y}%`;
+      wrapper.style.left = `${x}%`;
+      wrapper.style.top = `${y}%`;
 
+      // поворот части картинок
       let rotation = 0;
       if (rotatedIndexes.has(index)) {
         rotation = (Math.random() * 30 - 15).toFixed(1); // от -15° до +15°
@@ -430,18 +439,15 @@
       const target = event.target.closest('.item');
       if (!target) return;
 
-      const imgEl = target.querySelector('img');
-
-      // Секретное сообщение для конкретного файла
-      if (imgEl && imgEl.src.includes('bad15.jpg')) {
-        alert('Ого! Ты нашла секретное фото! 😍 Но нет... оно не твоё, попробуй ещё.');
+      // Сообщение при клике на конкретную картинку
+      if (target.querySelector('img').src.includes('bad15.jpg')) {
+        alert("Ого! Ты нашла секретное фото!😍 Но нет....это просто посмотреть, попробуй еще");
       }
 
       const type = target.dataset.type;
 
       if (type === 'good') {
         if (target.classList.contains('found')) return;
-
         target.classList.add('found');
         foundGood++;
         updateCounter();
@@ -457,6 +463,7 @@
             }
           });
 
+          // блёстки 
           runSparklesExplosion();
 
           // стоп основной музыки
@@ -473,7 +480,7 @@
           statusTextEl.textContent = 'Ууффф! Продолжай искать свои фото…';
         }
       } else {
-        // неправильное фото — не убираем, только текст
+        // неправильное фото — не убираем, просто текст
         statusTextEl.textContent = 'Это не то фото 😏 Ищи другие.';
       }
     });
